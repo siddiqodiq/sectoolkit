@@ -80,10 +80,10 @@ export const tools: Tool[] = [
   },
   {
     id: "9",
-    name: "SQLi Exploiter",
+    name: "SQL Map",
     description: "Exploit SQL injection vulnerabilities.",
     category: "exploit",
-    status: "Under Development",
+    status: "Available",
   },
   {
     id: "10",

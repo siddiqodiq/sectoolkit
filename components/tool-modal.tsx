@@ -16,6 +16,7 @@ import { GoogleDorkModal } from "./tools/google-dork-modal"
 import { OpenRedirectModal } from "./tools/open-redirect-modal"
 import { UrlFuzzerModal } from "./tools/url-fuzzer-modal"
 import { XssScanModal } from "./tools/xss-scan-modal"
+import { SqlScanModal } from "./tools/sqlmap-modal"
 
 interface ToolModalProps {
   toolId: string | null
@@ -161,6 +162,14 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
     case "XSS Exploiter":
   return (
     <XssScanModal
+      tool={selectedTool}
+      isOpen={internalIsOpen}
+      onClose={handleClose}
+      onSendToChat={onSendToChat}
+    />)
+    case "SQL Map":
+  return (
+    <SqlScanModal
       tool={selectedTool}
       isOpen={internalIsOpen}
       onClose={handleClose}

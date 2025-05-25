@@ -90,7 +90,7 @@ export function ToolsSidebar({ onSelectTool, activeTool }: ToolsSidebarProps) {
       Nuclei: AlertTriangle,
       Nikto: Server,
       "XSS Exploiter": Code,
-      "SQLi Exploiter": Database,
+      "SQL Map": Database,
       "CVSS Scoring": Calculator,
     }
 
