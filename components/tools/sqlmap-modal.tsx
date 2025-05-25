@@ -452,154 +452,154 @@ export function SqlScanModal({ tool, isOpen, onClose, onSendToChat }: SqlScanMod
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-4 pt-4">
                 <div className="space-y-4">
-                    <h4 className="font-medium">Enumeration Options</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="banner"
-                          checked={enumerationOptions.banner}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, banner: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="banner">DBMS Banner</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="currentUser"
-                          checked={enumerationOptions.currentUser}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, currentUser: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="currentUser">Current User</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="currentDb"
-                          checked={enumerationOptions.currentDb}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, currentDb: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="currentDb">Current DB</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="hostname"
-                          checked={enumerationOptions.hostname}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, hostname: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="hostname">Hostname</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="isDba"
-                          checked={enumerationOptions.isDba}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, isDba: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="isDba">Is DBA</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="users"
-                          checked={enumerationOptions.users}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, users: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="users">Users</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="passwords"
-                          checked={enumerationOptions.passwords}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, passwords: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="passwords">Passwords</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="privileges"
-                          checked={enumerationOptions.privileges}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, privileges: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="privileges">Privileges</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="dbs"
-                          checked={enumerationOptions.dbs}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, dbs: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="dbs">Databases</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="tables"
-                          checked={enumerationOptions.tables}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, tables: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="tables">Tables</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="columns"
-                          checked={enumerationOptions.columns}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, columns: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="columns">Columns</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="dump"
-                          checked={enumerationOptions.dump}
-                          onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, dump: checked})}
-                          disabled={isLoading}
-                        />
-                        <Label htmlFor="dump">Dump Table</Label>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="specificDb">Specific DB</Label>
-                        <Input
-                          id="specificDb"
-                          type="text"
-                          placeholder="database_name"
-                          value={enumerationOptions.specificDb}
-                          onChange={(e) => setEnumerationOptions({...enumerationOptions, specificDb: e.target.value})}
-                          disabled={isLoading}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="specificTable">Specific Table</Label>
-                        <Input
-                          id="specificTable"
-                          type="text"
-                          placeholder="table_name"
-                          value={enumerationOptions.specificTable}
-                          onChange={(e) => setEnumerationOptions({...enumerationOptions, specificTable: e.target.value})}
-                          disabled={isLoading}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="specificColumn">Specific Column</Label>
-                        <Input
-                          id="specificColumn"
-                          type="text"
-                          placeholder="column_name"
-                          value={enumerationOptions.specificColumn}
-                          onChange={(e) => setEnumerationOptions({...enumerationOptions, specificColumn: e.target.value})}
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </div>
-                  </div>
+  <h4 className="font-medium">Enumeration Options</h4>
+  <div className="grid grid-cols-2 gap-4">
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="banner"
+        checked={enumerationOptions.banner}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, banner: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="banner" className="flex flex-col">
+        DBMS Banner
+        <span className="text-xs text-muted-foreground mt-0.5">(--banner)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="currentUser"
+        checked={enumerationOptions.currentUser}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, currentUser: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="currentUser" className="flex flex-col">
+        Current User
+        <span className="text-xs text-muted-foreground mt-0.5">(--current-user)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="currentDb"
+        checked={enumerationOptions.currentDb}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, currentDb: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="currentDb" className="flex flex-col">
+        Current DB
+        <span className="text-xs text-muted-foreground mt-0.5">(--current-db)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="hostname"
+        checked={enumerationOptions.hostname}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, hostname: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="hostname" className="flex flex-col">
+        Hostname
+        <span className="text-xs text-muted-foreground mt-0.5">(--hostname)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="isDba"
+        checked={enumerationOptions.isDba}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, isDba: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="isDba" className="flex flex-col">
+        Is DBA
+        <span className="text-xs text-muted-foreground mt-0.5">(--is-dba)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="users"
+        checked={enumerationOptions.users}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, users: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="users" className="flex flex-col">
+        Users
+        <span className="text-xs text-muted-foreground mt-0.5">(--users)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="passwords"
+        checked={enumerationOptions.passwords}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, passwords: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="passwords" className="flex flex-col">
+        Passwords
+        <span className="text-xs text-muted-foreground mt-0.5">(--passwords)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="privileges"
+        checked={enumerationOptions.privileges}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, privileges: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="privileges" className="flex flex-col">
+        Privileges
+        <span className="text-xs text-muted-foreground mt-0.5">(--privileges)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="dbs"
+        checked={enumerationOptions.dbs}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, dbs: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="dbs" className="flex flex-col">
+        Databases
+        <span className="text-xs text-muted-foreground mt-0.5">(--dbs)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="tables"
+        checked={enumerationOptions.tables}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, tables: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="tables" className="flex flex-col">
+        Tables
+        <span className="text-xs text-muted-foreground mt-0.5">(--tables)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="columns"
+        checked={enumerationOptions.columns}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, columns: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="columns" className="flex flex-col">
+        Columns
+        <span className="text-xs text-muted-foreground mt-0.5">(--columns)</span>
+      </Label>
+    </div>
+    <div className="flex items-center space-x-2">
+      <Switch
+        id="dump"
+        checked={enumerationOptions.dump}
+        onCheckedChange={(checked) => setEnumerationOptions({...enumerationOptions, dump: checked})}
+        disabled={isLoading}
+      />
+      <Label htmlFor="dump" className="flex flex-col">
+        Dump Table
+        <span className="text-xs text-muted-foreground mt-0.5">(--dump)</span>
+      </Label>
+    </div>
+  </div>
+</div>
                   <div className="space-y-4">
                     <h4 className="font-medium">Request Options</h4>
                     <div className="space-y-2">
