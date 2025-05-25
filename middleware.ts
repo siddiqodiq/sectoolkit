@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server'
 
 export default withAuth(
   function middleware(req) {
-    // Tambahkan logika tambahan jika diperlukan
   },
   {
     callbacks: {

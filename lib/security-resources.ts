@@ -19,6 +19,7 @@ export const payloadTemplates: SecurityResource[] = [
     sourceUrl: "",
     previewAvailable: true
   },
+  
   {
   id: "PT-005",
     name: "🔥 💉XSS Bypass Payload 💉🔥 ",    
