@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/genai": "^1.0.1",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.8.2",
