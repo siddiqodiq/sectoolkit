@@ -32,7 +32,8 @@ import {
   DoorOpenIcon as DoorOpen,
   Antenna,
   Calculator,
-  Pointer
+  Pointer,
+  Cctv
 } from "lucide-react"
 import { tools, getCategoryLabel } from "@/lib/tools"
 import { useEffect } from "react"
@@ -92,6 +93,7 @@ export function ToolsSidebar({ onSelectTool, activeTool }: ToolsSidebarProps) {
       "XSS Exploiter": Code,
       "SQL Map": Database,
       "CVSS Scoring": Calculator,
+      "DNS Recon": Cctv,
     }
 
     return iconMap[toolName] || Braces

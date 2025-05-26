@@ -60,34 +60,42 @@ export function UrlFuzzerModal({ tool, isOpen, onClose, onSendToChat }: UrlFuzze
       }
     };
   }, []);
+const formatResultLine = (line: string) => {
+  // Hilangkan karakter ANSI
+  let cleanLine = line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
 
-  const formatResultLine = (line: string) => {
-    // Format the line to highlight important information
-    const parts = line.split('[');
-    if (parts.length > 1) {
-      const statusMatch = line.match(/Status: (\d+)/);
-      const sizeMatch = line.match(/Size: (\d+)/);
-      
+  // Extract the payload and status
+  const payloadMatch = cleanLine.match(/^(.+?)\s+\[Status:\s*(\d+)/);
+  if (payloadMatch) {
+    const payload = payloadMatch[1];
+    const status = payloadMatch[2];
+    const fullUrl = `${targetUrl.replace("FUZZ", "")}${payload}`;
+
+    if (status === '200') {
       return (
-        <div className="flex flex-wrap items-baseline gap-1">
-          <span className="text-muted-foreground">{parts[0]}</span>
-          {statusMatch && (
-            <span className={`px-1 rounded ${
-              statusMatch[1] === '200' ? 'bg-green-500/20 text-green-500' :
-              statusMatch[1] === '404' ? 'bg-red-500/20 text-red-500' :
-              'bg-yellow-500/20 text-yellow-500'
-            }`}>
-              Status: {statusMatch[1]}
-            </span>
-          )}
-          {sizeMatch && (
-            <span className="text-blue-500">Size: {sizeMatch[1]}</span>
-          )}
+        <div className="text-muted-foreground">
+          <a 
+            href={fullUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-green-500 hover:text-green-400 hover:underline"
+          >
+            {fullUrl} [Status: {status}]
+          </a>
+        </div>
+      );
+    } else {
+      return (
+        <div className="text-muted-foreground">
+          {fullUrl} [Status: {status}]
         </div>
       );
     }
-    return <div className="text-muted-foreground">{line}</div>;
-  };
+  }
+
+  // Fallback for lines that don't match the expected format
+  return <div className="text-muted-foreground">{cleanLine}</div>;
+};
 
   const handleRunTool = async () => {
     if (!targetUrl) {
@@ -284,6 +292,10 @@ export function UrlFuzzerModal({ tool, isOpen, onClose, onSendToChat }: UrlFuzze
     <>
       <BaseToolModal tool={tool} isOpen={isOpen} onClose={handleCloseAttempt}>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="text-muted-foreground">
+          <a href="http://example.com/payload" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">
+          </a>
+        </div>
           <Card>
             <CardHeader>
               <CardTitle>URL Fuzzer</CardTitle>

@@ -447,7 +447,7 @@ export function SqlScanModal({ tool, isOpen, onClose, onSendToChat }: SqlScanMod
                   className="flex items-center justify-between w-full py-2 font-medium"
                   onClick={() => setShowAdvanced(!showAdvanced)}
                 >
-                  <span>Advanced Options</span>
+                  <span>Advanced Options (optional)</span>
                   {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-4 pt-4">
@@ -801,8 +801,8 @@ export function SqlScanModal({ tool, isOpen, onClose, onSendToChat }: SqlScanMod
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-xs">
                   <p>• Legal disclaimer: Usage for attacking targets without prior mutual consent is illegal</p>
-                  <p>• It is your responsibility to obey all applicable laws</p>
-                  <p>• Developers assume no liability for misuse of this tool</p>
+                  <p>• A simple scan uses the database option (--dbs)</p>
+                  <p>• You do not need to fill in all advanced options—only use those relevant to your scan</p>
                 </AlertDescription>
               </Alert>
             </CardContent>

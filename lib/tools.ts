@@ -36,6 +36,13 @@ export const tools: Tool[] = [
     status: "Available",
   },
   {
+    id: "7",
+    name: "DNS Recon",
+    description: "Perform DNS reconnaissance on a target domain.",
+    category: "recon",
+    status: "Available",
+  },
+  {
     id: "3",
     name: "WAF Detector",
     description: "Detect if a website is behind a WAF.",

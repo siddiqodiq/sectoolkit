@@ -19,6 +19,24 @@ export const payloadTemplates: SecurityResource[] = [
     sourceUrl: "",
     previewAvailable: true
   },
+  {
+  id: "PT-008",
+    name: "Payloads by CoffinXP",
+    type: "All",
+    size: "-",
+    filePath: "/",
+    sourceUrl: "https://github.com/coffinxp/loxs/tree/main/payloads",
+    previewAvailable: false
+  },
+  {
+    id: "PT-009",
+    name: "Nuclei Templates by CoffinXP",
+    type: "Yaml",
+    size: "-",
+    filePath: "",
+    sourceUrl: "https://github.com/coffinxp/nuclei-templates.git"
+    , previewAvailable: false
+  },
   
   {
   id: "PT-005",
@@ -74,6 +92,7 @@ export const payloadTemplates: SecurityResource[] = [
     sourceUrl: "",
     previewAvailable: true
   },
+  
 
   
 ]
