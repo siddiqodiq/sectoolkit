@@ -77,7 +77,11 @@ export default function RegisterPage() {
       // Show username setup modal after successful registration
       setShowUsernameModal(true)
     } catch (err) {
-      setError(err.message || "Registration failed")
+      setError(
+        err && typeof err === "object" && "message" in err && typeof (err as any).message === "string"
+          ? (err as any).message
+          : "Registration failed"
+      )
     } finally {
       setIsLoading(false)
     }
@@ -142,7 +146,11 @@ export default function RegisterPage() {
       // Redirect to dashboard
       router.push(callbackUrl)
     } catch (err) {
-      setUsernameError(err.message || "Failed to set username")
+      setUsernameError(
+        err && typeof err === "object" && "message" in err && typeof (err as any).message === "string"
+          ? (err as any).message
+          : "Failed to set username"
+      )
     } finally {
       setIsLoading(false)
     }

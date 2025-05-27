@@ -17,8 +17,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - pungoe_network
 
   app:
     build: .
@@ -35,13 +33,9 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-    networks:
-      - pungoe_network
-    restart: unless-stopped
+    working_dir: /app
+    stdin_open: true
+    tty: true
 
 volumes:
   postgres_data:
-
-networks:
-  pungoe_network:
-    driver: bridge
