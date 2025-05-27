@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     chat = await prisma.chat.create({
       data: {
         userId: session.user.id,
-        title: messages.find(m => m.role === 'user')?.content.substring(0, 50) || 'New Chat',
+        title: messages.find((m: { role: string }) => m.role === 'user')?.content.substring(0, 50) || 'New Chat',
         modelUsed: process.env.OLLAMA_MODEL || 'pentest-ai'
       }
     })

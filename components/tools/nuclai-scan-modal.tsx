@@ -439,7 +439,7 @@ const formatResultLine = (line: string) => {
       <div className="relative">
         {results.length > 0 ? (
           results[0] === 'No vulnerabilities found' ? (
-            <Alert variant="success">
+            <Alert variant="default">
               <ShieldCheck className="h-4 w-4" />
               <AlertTitle>Scan Completed</AlertTitle>
               <AlertDescription>
@@ -491,7 +491,7 @@ const formatResultLine = (line: string) => {
                     </div>
                 </>)
          ) : (
-          <Alert variant={scanCompleted ? "success" : "default"}>
+          <Alert variant="default">
             {scanCompleted ? (
               <>
                 <ShieldCheck className="h-4 w-4" />

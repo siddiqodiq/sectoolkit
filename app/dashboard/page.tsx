@@ -85,7 +85,6 @@ export default function Home() {
 
           <ChatInterface 
             activeTool={activeTool} 
-            currentChatId={chatId}
           />
         </div>
       </SidebarInset>

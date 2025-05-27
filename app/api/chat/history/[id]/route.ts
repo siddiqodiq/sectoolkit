@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user?.id) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -20,7 +20,9 @@ export async function GET(
     const chat = await prisma.chat.findUnique({
       where: {
         id,
-        userId: session.user.id,
+        user: {
+          email: session.user.email,
+        },
       },
       include: {
         messages: {

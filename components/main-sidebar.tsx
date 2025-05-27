@@ -291,8 +291,8 @@ export function MainSidebar() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="h-10 w-10 border-2 border-gray-500/30 cursor-pointer hover:border-gray-400 transition-colors">
-                  {session?.user?.avatar ? (
-                    <AvatarImage src={session.user.avatar} alt="User" />
+                  {session?.user?.image ? (
+                    <AvatarImage src={session.user.image} alt="User" />
                   ) : (
                     <AvatarFallback className="bg-gray-800 text-gray-300">
                       {getInitials(session?.user?.name)}
@@ -323,7 +323,7 @@ export function MainSidebar() {
                 {session?.user?.name || 'User'}
               </p>
               <p className="text-xs text-gray-400">
-                @{session?.user?.username || 'username'}
+                @{session?.user?.email || session?.user?.name || 'user'}
               </p>
             </div>
           </div>

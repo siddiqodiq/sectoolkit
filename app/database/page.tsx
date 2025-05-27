@@ -24,6 +24,7 @@ import { SearchHeader } from "@/components/database/search-header"
 import { useRouter } from "next/navigation"
 import router from "next/router"
 
+
 export default function SecurityDatabasePage() {
     const router = useRouter()
   

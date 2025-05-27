@@ -47,7 +47,11 @@ const handleLogin = async () => {
       router.push(result.url)
     }
   } catch (err) {
-    setError(err.message || "Login failed")
+    if (err instanceof Error) {
+      setError(err.message)
+    } else {
+      setError("Login failed")
+    }
   } finally {
     setIsLoading(false)
   }

@@ -371,7 +371,7 @@ function hashCode(str: string): number {
                 <Logo className="h-7 w-7 text-white" />
               </div>
                <h2 className="text-lg font-bold gradient-text">
-      Hi, {session?.user?.username || 'User'} !
+      Hi, {session?.user?.name || 'User'} !
     </h2>
             </div>
           </div>
