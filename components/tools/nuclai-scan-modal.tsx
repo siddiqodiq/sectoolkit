@@ -123,7 +123,6 @@ const formatResultLine = (line: string) => {
   abortControllerRef.current = new AbortController();
 
   try {
-    // Create FormData for our Next.js API route
     const formData = new FormData();
     formData.append('target', targetUrl);
     formData.append('scan_type', scanType);
@@ -150,6 +149,7 @@ const formatResultLine = (line: string) => {
 
     let accumulatedText = '';
     const decoder = new TextDecoder();
+    let hasOutput = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -157,6 +157,7 @@ const formatResultLine = (line: string) => {
 
       const textChunk = decoder.decode(value, { stream: true });
       accumulatedText += textChunk;
+      hasOutput = true;
 
       const lines = accumulatedText.split('\n');
       accumulatedText = lines.pop() || '';
@@ -170,19 +171,22 @@ const formatResultLine = (line: string) => {
 
     if (accumulatedText.trim()) {
       setResults(prev => [...prev, accumulatedText]);
+      hasOutput = true;
     }
 
-    // Check if any vulnerabilities were found
-    const vulnerabilitiesFound = results.some(line => 
-      line.match(/^\[([^\]]+)\] \[([^\]]+)\] \[([^\]]+)\] (.+)/)
-    );
+    // Explicitly handle empty output case
+    if (!hasOutput) {
+      setResults(['No vulnerabilities found']);
+    }
+
+    setScanCompleted(true);
 
     toast({
-      title: vulnerabilitiesFound ? "Nuclei Scan completed" : "No vulnerabilities found",
-      description: vulnerabilitiesFound 
+      title: hasOutput ? "Nuclei Scan completed" : "Scan completed",
+      description: hasOutput 
         ? `Found ${results.filter(line => line.match(/^\[([^\]]+)\] \[([^\]]+)\] \[([^\]]+)\] (.+)/)).length} potential vulnerabilities` 
         : "No vulnerabilities detected in the target",
-      variant: vulnerabilitiesFound ? "default" : "success"
+      variant: hasOutput ? "default" : "success"
     });
 
     setScanCompleted(true);
@@ -428,21 +432,30 @@ const formatResultLine = (line: string) => {
       <CardDescription>
         {results.some(line => line.match(/^\[([^\]]+)\] \[([^\]]+)\] \[([^\]]+)\] (.+)/)) 
           ? `Found ${results.filter(line => line.match(/^\[([^\]]+)\] \[([^\]]+)\] \[([^\]]+)\] (.+)/)).length} vulnerabilities`
-          : scanCompleted ? "No potential vulnerabilities found" : "Scan in progress"}
+          : scanCompleted ? "Scan completed with no vulnerabilities found" : "Scan in progress"}
       </CardDescription>
     </CardHeader>
     <CardContent>
       <div className="relative">
         {results.length > 0 ? (
-          <>
-            <div className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto space-y-2">
-              {results.map((result, index) => (
-                <div key={index}>
-                  {formatResultLine(result)}
-                </div>
-              ))}
-              <div ref={resultsEndRef} />
-            </div>
+          results[0] === 'No vulnerabilities found' ? (
+            <Alert variant="success">
+              <ShieldCheck className="h-4 w-4" />
+              <AlertTitle>Scan Completed</AlertTitle>
+              <AlertDescription>
+                No vulnerabilities were found in the target.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto space-y-2">
+                {results.map((result, index) => (
+                  <div key={index}>
+                    {formatResultLine(result)}
+                  </div>
+                ))}
+                <div ref={resultsEndRef} />
+              </div>
                     <div className="absolute top-2 right-2 flex gap-2">
                     <Button 
                         size="sm" 
@@ -476,15 +489,15 @@ const formatResultLine = (line: string) => {
                         </Button>
                     )}
                     </div>
-                </>
-        ) : (
+                </>)
+         ) : (
           <Alert variant={scanCompleted ? "success" : "default"}>
             {scanCompleted ? (
               <>
                 <ShieldCheck className="h-4 w-4" />
                 <AlertTitle>Scan Completed</AlertTitle>
                 <AlertDescription>
-                  No potential vulnerabilities found in the target.
+                  No vulnerabilities were found in the target.
                 </AlertDescription>
               </>
             ) : (

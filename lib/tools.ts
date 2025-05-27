@@ -132,7 +132,7 @@ export const tools: Tool[] = [
 export const getCategoryLabel = (category: string): string => {
   const categoryMap: Record<string, string> = {
     recon: "Reconnaissance",
-    vulnerability: "Vulnerability Assessment",
+    vulnerability: "Vulnerability Scanning",
     exploit: "Exploitation",
     utils: "Utilities",
   }
