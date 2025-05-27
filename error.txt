@@ -19,124 +19,14 @@ app/database/page.tsx:135:34 - error TS2322: Type '{ data: { id: string; name: s
 
 
 
-  components/ui/toast.tsx:31:7
-     31       variant: {
-              ~~~~~~~~~~
-     32         default: "border bg-background text-foreground",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ...
-     34           "destructive group border-destructive bg-destructive text-destructive-foreground",       
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~       
-     35       },
-        ~~~~~~~
-    The expected type comes from property 'variant' which is declared here on type 'Toast'
 
-components/tools/nuclai-scan-modal.tsx:442:20 - error TS2322: Type '"success"' is not assignable to type '"destructive" | "default" | null | undefined'.
 
-442             <Alert variant="success">
-                       ~~~~~~~
 
-  components/ui/alert.tsx:10:7
-     10       variant: {
-              ~~~~~~~~~~
-     11         default: "bg-background text-foreground",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ...
-     13           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     14       },
-        ~~~~~~~
-    The expected type comes from property 'variant' which is declared here on type 'IntrinsicAttributes & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) | undefined) => string> & RefAttributes<...>'
 
-components/tools/nuclai-scan-modal.tsx:494:18 - error TS2322: Type '"default" | "success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-  Type '"success"' is not assignable to type '"destructive" | "default" | null | undefined'.
 
-494           <Alert variant={scanCompleted ? "success" : "default"}>
-                     ~~~~~~~
 
-  components/ui/alert.tsx:10:7
-     10       variant: {
-              ~~~~~~~~~~
-     11         default: "bg-background text-foreground",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ...
-     13           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     14       },
-        ~~~~~~~
-    The expected type comes from property 'variant' which is declared here on type 'IntrinsicAttributes & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) | undefined) => string> & RefAttributes<...>'
 
-components/tools/sqlmap-modal.tsx:253:7 - error TS2322: Type '"default" | "success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-  Type '"success"' is not assignable to type '"destructive" | "default" | null | undefined'.
 
-253       variant: vulnerabilitiesFound ? "default" : "success"
-          ~~~~~~~
-
-  components/ui/toast.tsx:31:7
-     31       variant: {
-              ~~~~~~~~~~
-     32         default: "border bg-background text-foreground",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ...
-     34           "destructive group border-destructive bg-destructive text-destructive-foreground",       
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~       
-     35       },
-        ~~~~~~~
-    The expected type comes from property 'variant' which is declared here on type 'Toast'
-
-components/tools/sqlmap-modal.tsx:898:28 - error TS2322: Type '"default" | "success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-  Type '"success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-
-898                     <Alert variant={scanCompleted ? "success" : "default"}>
-                               ~~~~~~~
-
-  components/ui/alert.tsx:10:7
-     10       variant: {
-              ~~~~~~~~~~
-     11         default: "bg-background text-foreground",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ...
-     13           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     14       },
-        ~~~~~~~
-    The expected type comes from property 'variant' which is declared here on type 'IntrinsicAttributes & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) | undefined) => string> & RefAttributes<...>'
-
-components/tools/xss-scan-modal.tsx:186:9 - error TS2322: Type '"default" | "success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-  Type '"success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-
-186         variant: vulnerabilitiesFound ? "default" : "success"
-            ~~~~~~~
-
-  components/ui/toast.tsx:31:7
-     31       variant: {
-              ~~~~~~~~~~
-     32         default: "border bg-background text-foreground",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ...
-     34           "destructive group border-destructive bg-destructive text-destructive-foreground",       
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~       
-     35       },
-        ~~~~~~~
-    The expected type comes from property 'variant' which is declared here on type 'Toast'
-
-components/tools/xss-scan-modal.tsx:546:28 - error TS2322: Type '"default" | "success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-  Type '"success"' is not assignable to type '"destructive" | "default" | null | undefined'.
-
-546                     <Alert variant={scanCompleted ? "success" : "default"}>
-                               ~~~~~~~
-
-  components/ui/alert.tsx:10:7
-     10       variant: {
-              ~~~~~~~~~~
-     11         default: "bg-background text-foreground",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ...
-     13           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     14       },
-        ~~~~~~~
-    The expected type comes from property 'variant' which is declared here on type 'IntrinsicAttributes & HTMLAttributes<HTMLDivElement> & VariantProps<(props?: (ConfigVariants<{ variant: { default: string; destructive: string; }; }> & ClassProp) | undefined) => string> & RefAttributes<...>'
 
 lib/auth.ts:46:31 - error TS2339: Property 'username' does not exist on type 'User | AdapterUser'.
   Property 'username' does not exist on type 'User'.

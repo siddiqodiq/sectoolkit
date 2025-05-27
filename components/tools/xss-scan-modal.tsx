@@ -543,7 +543,7 @@ export function XssScanModal({ tool, isOpen, onClose, onSendToChat }: XssScanMod
                       </div>
                     </>
                   ) : (
-                    <Alert variant={scanCompleted ? "success" : "default"}>
+                    <Alert variant={scanCompleted ? "default" : "default"}>
                       {scanCompleted ? (
                         <>
                           <ShieldCheck className="h-4 w-4" />
