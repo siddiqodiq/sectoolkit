@@ -4,6 +4,22 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import prisma from './db'
 import bcrypt from 'bcryptjs'
 
+import type { User as NextAuthUser, Session as NextAuthSession } from 'next-auth'
+
+declare module 'next-auth' {
+  interface User {
+    username?: string
+  }
+  interface Session {
+    user: {
+      id: string
+      email: string
+      name?: string
+      username?: string
+    }
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -34,7 +50,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          username: user.username
+          username: user.username ?? undefined
         }
       }
     })

@@ -1,63 +1,74 @@
-pnpm tsc --noEmit
+The TypeScript errors you're encountering indicate that you're trying to pass a `data` prop to `PayloadTable` and `WordlistTable` components, but these components don't accept any props (they're defined without any parameters).
 
+Here's how to fix the issues:
 
+1. First, update your `PayloadTable` component to accept a `data` prop:
 
+```tsx
+// components/database/payload-table.tsx
+interface PayloadTableProps {
+  data: {
+    id: string;
+    name: string;
+    type: string;
+    size: string;
+    filePath?: string;
+    sourceUrl?: string;
+    previewAvailable: boolean;
+  }[];
+}
 
+export const PayloadTable = ({ data }: PayloadTableProps) => {
+  // ... rest of the component code remains the same
+  // Just replace all instances of `payloadTemplates` with `data`
+}
+```
 
+2. Similarly, update your `WordlistTable` component:
 
-app/database/page.tsx:103:33 - error TS2322: Type '{ data: { id: string; name: string; type: string; language: string; size: string; }[]; }' is not assignable to type 'IntrinsicAttributes'.
-  Property 'data' does not exist on type 'IntrinsicAttributes'.
+```tsx
+// components/database/wordlist-table.tsx
+interface WordlistTableProps {
+  data: {
+    id: string;
+    name: string;
+    type: string;
+    size?: string;
+    filePath?: string;
+    sourceUrl?: string;
+    previewAvailable: boolean;
+  }[];
+}
 
-103                   <PayloadTable data={payloadTemplates} />
-                                    ~~~~
+export const WordlistTable = ({ data }: WordlistTableProps) => {
+  // ... rest of the component code remains the same
+  // Just replace all instances of `wordlists` with `data`
+}
+```
 
-app/database/page.tsx:135:34 - error TS2322: Type '{ data: { id: string; name: string; type: string; entries: string; size: string; }[]; }' is not assignable to type 'IntrinsicAttributes'.
-  Property 'data' does not exist on type 'IntrinsicAttributes'.
+3. Alternatively, if you prefer to keep using the imported `payloadTemplates` and `wordlists` directly in the components (as your current implementation does), then you should remove the `data` prop being passed in your page component:
 
-135                   <WordlistTable data={wordlists} />
-                                     ~~~~
+```tsx
+// In app/database/page.tsx
+// Change this:
+<PayloadTable data={payloadTemplates} />
 
+// To this:
+<PayloadTable />
+```
 
+And similarly for the WordlistTable:
 
+```tsx
+// Change this:
+<WordlistTable data={wordlists} />
 
+// To this:
+<WordlistTable />
+```
 
+Choose one of these approaches based on your needs:
+- If you want the tables to be reusable with different data sources, use the first approach (adding props)
+- If these tables will always use the data from `security-resources.ts`, use the second approach (remove the prop passing)
 
-
-
-
-
-
-
-lib/auth.ts:46:31 - error TS2339: Property 'username' does not exist on type 'User | AdapterUser'.
-  Property 'username' does not exist on type 'User'.
-
-46         token.username = user.username
-                                 ~~~~~~~~
-
-lib/auth.ts:52:22 - error TS2339: Property 'id' does not exist on type '{ name?: string | null | undefined; email?: string | null | undefined; image?: string | null | undefined; }'.
-
-52         session.user.id = token.id as string
-                        ~~
-
-lib/auth.ts:53:22 - error TS2339: Property 'username' does not exist on type '{ name?: string | null | undefined; email?: string | null | undefined; image?: string | null | undefined; }'.
-
-53         session.user.username = token.username as string
-                        ~~~~~~~~
-
-
-Found 32 errors in 13 files.
-
-Errors  Files
-     2  app/api/chat/history/[id]/route.ts:13
-     6  app/api/chat/history/route.ts:10
-     4  app/api/chat/route.ts:13
-     1  app/dashboard/page.tsx:88
-     2  app/database/page.tsx:103
-     1  app/login/page.tsx:50
-     1  components/chat-interface.tsx:374
-     1  components/logo-preview.tsx:68
-     4  components/main-sidebar.tsx:128
-     3  components/tools/nuclai-scan-modal.tsx:189
-     2  components/tools/sqlmap-modal.tsx:253
-     2  components/tools/xss-scan-modal.tsx:186
-     3  lib/auth.ts:46
+Since your current table components are already using the imported data directly, the simpler solution would be to remove the prop passing from your page component.  

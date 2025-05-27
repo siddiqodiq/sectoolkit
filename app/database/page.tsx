@@ -101,7 +101,7 @@ export default function SecurityDatabasePage() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <PayloadTable data={payloadTemplates} />
+                  <PayloadTable data={[]} />
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col md:flex-row justify-between gap-4">
@@ -133,7 +133,7 @@ export default function SecurityDatabasePage() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <WordlistTable data={wordlists} />
+                  <WordlistTable data={[]} />
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col md:flex-row justify-between gap-4">

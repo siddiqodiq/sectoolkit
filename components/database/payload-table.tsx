@@ -16,7 +16,19 @@ import { payloadTemplates } from "@/lib/security-resources"
 import { useState } from "react"
 import { TextFilePreview } from "@/components/database/text-file-preview"
 
-export const PayloadTable = () => {
+interface PayloadTableProps {
+  data: {
+    id: string;
+    name: string;
+    type: string;
+    size: string;
+    filePath?: string;
+    sourceUrl?: string;
+    previewAvailable: boolean;
+  }[];
+}
+
+export const PayloadTable = ({ data }: PayloadTableProps) => {
   const [selectedResource, setSelectedResource] = useState<any>(null)
 
   const downloadFile = async (filePath: string, fileName: string) => {

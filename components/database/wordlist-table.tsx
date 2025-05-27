@@ -16,7 +16,20 @@ import { wordlists } from "@/lib/security-resources"
 import { useState } from "react"
 import { TextFilePreview } from "@/components/database/text-file-preview"
 
-export const WordlistTable = () => {
+interface WordlistTableProps {
+  data: {
+    id: string;
+    name: string;
+    type: string;
+    size?: string;
+    filePath?: string;
+    sourceUrl?: string;
+    previewAvailable: boolean;
+  }[];
+}
+
+
+export const WordlistTable = ({ data }: WordlistTableProps) => {
   const [selectedResource, setSelectedResource] = useState<any>(null)
 
   return (
