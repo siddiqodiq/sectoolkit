@@ -88,7 +88,7 @@ export function ToolsSidebar({ onSelectTool, activeTool }: ToolsSidebarProps) {
       "URL Fuzzer": FileSearch,
       "CORS Misc Scanner": Antenna,
       "Open Redirect Exploiter": DoorOpen,
-      Nuclei: AlertTriangle,
+      "Nuclei Scan": AlertTriangle,
       Nikto: Server,
       "XSS Exploiter": Code,
       "SQL Map": Database,

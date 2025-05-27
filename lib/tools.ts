@@ -73,10 +73,10 @@ export const tools: Tool[] = [
   },
   {
     id: "6",
-    name: "Nuclei",
+    name: "Nuclei Scan",
     description: "Fast and customizable vulnerability scanner.",
     category: "vulnerability",
-    status: "Under Development",
+    status: "Available",
   },
   {
     id: "8",

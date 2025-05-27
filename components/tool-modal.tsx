@@ -18,6 +18,7 @@ import { UrlFuzzerModal } from "./tools/url-fuzzer-modal"
 import { XssScanModal } from "./tools/xss-scan-modal"
 import { SqlScanModal } from "./tools/sqlmap-modal"
 import { DnsReconModal } from "./tools/dnsrecon-modal"
+import { NucleiScanModal } from "./tools/nuclai-scan-modal"
 
 interface ToolModalProps {
   toolId: string | null
@@ -179,6 +180,14 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
      case "DNS Recon":
   return (
     <DnsReconModal
+      tool={selectedTool}
+      isOpen={internalIsOpen}
+      onClose={handleClose}
+      onSendToChat={onSendToChat}
+    />)
+    case "Nuclei Scan":
+  return (
+    <NucleiScanModal
       tool={selectedTool}
       isOpen={internalIsOpen}
       onClose={handleClose}
