@@ -3,7 +3,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15
-    container_name: pungoe_postgres
+    container_name: pungoe_postgres_prod
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -11,16 +11,19 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   app:
-    build: .
-    container_name: pungoe_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pungoe_app_prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,12 +33,7 @@ services:
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-ta_odiq}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-    volumes:
-      - .:/app
-      - /app/node_modules
-    working_dir: /app
-    stdin_open: true
-    tty: true
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_data_prod:
