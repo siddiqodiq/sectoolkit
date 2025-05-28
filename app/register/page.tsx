@@ -1,19 +1,36 @@
-"use client"
+  "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Shield, Eye, EyeOff, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Logoglitch } from "@/components/ui/logoglitch"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { signIn } from "next-auth/react"
+  import { useState, useEffect } from "react"
+  import Link from "next/link"
+  import { useRouter, useSearchParams } from "next/navigation"
+  import { Shield, Eye, EyeOff, AlertCircle } from "lucide-react"
+  import { Button } from "@/components/ui/button"
+  import { Input } from "@/components/ui/input"
+  import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+  import { Logoglitch } from "@/components/ui/logoglitch"
+  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+  import { signIn } from "next-auth/react"
+
+
+import { Suspense } from 'react'
+import { Metadata } from 'next'
 import '../../app/globals.css'
 
+
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-black text-white">Loading...</div>}>
+      <RegisterForm />
+    </Suspense>
+  )
+}
+
+function RegisterForm() {
+
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
+
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [email, setEmail] = useState("")
@@ -27,9 +44,6 @@ export default function RegisterPage() {
   const [name, setName] = useState("")
   const [usernameError, setUsernameError] = useState("")
   const [usernameSet, setUsernameSet] = useState(false)
-
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
 
   // Username validation regex: a-z, A-Z, 0-9, underscore, period; 3-20 characters
   const usernameRegex = /^[a-zA-Z0-9_.]{3,20}$/
@@ -49,7 +63,6 @@ export default function RegisterPage() {
   }, [password, confirmPassword])
 
   const handleRegister = async () => {
-    // Validate password length
     if (password.length < 8) {
       setPasswordError("Password must be at least 8 characters")
       return
@@ -74,7 +87,6 @@ export default function RegisterPage() {
         throw new Error(data.error || "Registration failed")
       }
 
-      // Show username setup modal after successful registration
       setShowUsernameModal(true)
     } catch (err) {
       setError(
@@ -88,13 +100,11 @@ export default function RegisterPage() {
   }
 
   const handleUsernameSubmit = async () => {
-    // Validate username
     if (!username) {
       setUsernameError("Username is required")
       return
     }
 
-    // Check username format
     if (!usernameRegex.test(username)) {
       setUsernameError(
         "Username must be 3-20 characters and contain only letters, numbers, underscores, or periods"
@@ -106,7 +116,6 @@ export default function RegisterPage() {
     setUsernameError("")
 
     try {
-      // Check if username exists
       const checkResponse = await fetch(`/api/auth/check-username?username=${username.toLowerCase()}`)
       const checkData = await checkResponse.json()
 
@@ -115,7 +124,6 @@ export default function RegisterPage() {
         return
       }
 
-      // Update username (store as lowercase for case-insensitive comparison)
       const updateResponse = await fetch("/api/auth/update-username", {
         method: "POST",
         headers: {
@@ -128,7 +136,6 @@ export default function RegisterPage() {
         throw new Error("Failed to update username")
       }
 
-      // Auto login after username is set
       const result = await signIn("credentials", {
         email,
         password,
@@ -140,10 +147,8 @@ export default function RegisterPage() {
         throw new Error(result.error)
       }
 
-      // Mark username as set to allow dialog to close
       setUsernameSet(true)
       setShowUsernameModal(false)
-      // Redirect to dashboard
       router.push(callbackUrl)
     } catch (err) {
       setUsernameError(
@@ -156,10 +161,8 @@ export default function RegisterPage() {
     }
   }
 
-  // Prevent dialog from closing unless username is set
   const handleDialogOpenChange = (open: boolean) => {
     if (!usernameSet) {
-      // Keep dialog open if username is not set
       setShowUsernameModal(true)
     } else {
       setShowUsernameModal(open)

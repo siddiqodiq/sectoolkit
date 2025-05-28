@@ -97,7 +97,7 @@
 
 /* Hover effects */
 .hover-effect {
-  transition: all 0.3s ease;
+  transition: all 0.3s ease ; 
 }
 
 .hover-effect:hover {
