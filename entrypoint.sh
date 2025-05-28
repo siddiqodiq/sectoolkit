@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Tunggu PostgreSQL siap
+# Tunggu database siap
 while ! nc -z postgres 5432; do
   echo "Waiting for PostgreSQL..."
   sleep 2

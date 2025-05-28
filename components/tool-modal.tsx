@@ -177,7 +177,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
-    case "Nuclei":
+    case "Nuclei Scan":
     return (
     <NucleiScanModal
       tool={selectedTool}
