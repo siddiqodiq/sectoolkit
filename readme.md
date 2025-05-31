@@ -66,7 +66,7 @@ Siap! Berikut pembaruan penjelasan di README (dalam Bahasa Indonesia) untuk peng
 
 ---
 
-## 🧠 Pentest-AI dan Ollama (Manual)
+## 🧠 Pentest-AI dan Ollama (Manual) -> instalasi manual tanpa docker
 
 Layanan **Ollama** dan model **Pentest-AI** tidak disertakan dalam Docker Compose. Anda perlu menginstalnya **secara manual di luar container**.
 
@@ -93,7 +93,7 @@ Layanan **Ollama** dan model **Pentest-AI** tidak disertakan dalam Docker Compos
 
 ---
 
-### 🌐 Mengakses dari Dalam Docker
+### 🌐 Mengakses dari Dalam Docker (masih dalam tahap perbaikan) 🟨
 
 Karena **Ollama berjalan di luar container**, aplikasi di dalam Docker harus menggunakan alamat khusus ini untuk mengakses Ollama:
 
