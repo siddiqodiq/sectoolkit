@@ -182,7 +182,7 @@ Namun aplikasi tidak dapat terkoneksi ke database, **kemungkinan besar PostgreSQ
    docker-compose down
    docker-compose up --build
    ```
-
+5. Jika masih error, hapus container dan build ulang
 Hal ini akan memastikan koneksi database mengarah ke PostgreSQL dalam Docker, bukan layanan lokal di Windows.
 
 

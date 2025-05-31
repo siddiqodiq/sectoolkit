@@ -48,10 +48,7 @@ export async function POST(req: Request) {
     })
   }
 
-  const model = createOllama({
-  model: process.env.OLLAMA_MODEL || 'pentest-ai',
-  baseURL: 'http://host.docker.internal:11434' // 👈 Kunci perubahan
-})
+  const model = ollama(process.env.OLLAMA_MODEL || 'pentest-ai')
 
   try {
     const { textStream } = await streamText({
