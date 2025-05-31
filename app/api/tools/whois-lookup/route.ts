@@ -1,6 +1,6 @@
 // app/api/tools/whois-lookup/route.ts
 import { NextResponse } from 'next/server';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const { domain } = await req.json();
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     // Forward to Flask backend
-    const flaskResponse = await fetch('http://localhost:5000/api/whois', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/whois`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain })

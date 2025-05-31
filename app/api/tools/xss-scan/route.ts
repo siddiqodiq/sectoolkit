@@ -1,6 +1,6 @@
 // app/api/tools/xss-scan/route.ts
 import { NextResponse } from 'next/server';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     if (targetFile) flaskFormData.append('target_file', targetFile);
     if (customPayload) flaskFormData.append('custom_payload', customPayload);
 
-    const flaskResponse = await fetch('http://localhost:5000/api/xss-scan', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/xss-scan`, {
       method: 'POST',
       body: flaskFormData,
       signal: req.signal || undefined,

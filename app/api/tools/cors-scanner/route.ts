@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import { stripAnsiCodes } from '@/utils/ansi';
 
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
+
 export async function POST(req: Request) {
   try {
     const { url } = await req.json();
@@ -13,7 +15,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const flaskResponse = await fetch('http://localhost:5000/api/cors-scan', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/cors-scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })

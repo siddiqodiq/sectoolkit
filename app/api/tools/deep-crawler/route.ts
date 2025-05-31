@@ -1,6 +1,8 @@
 // app/api/tools/deep-crawler/route.ts
 import { NextResponse } from 'next/server';
 
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
+
 export async function POST(req: Request) {
   try {
     const { target } = await req.json();
@@ -12,7 +14,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const flaskResponse = await fetch('http://localhost:5000/api/deepcrawl', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/deepcrawl`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target })

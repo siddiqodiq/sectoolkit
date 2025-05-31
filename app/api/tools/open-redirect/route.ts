@@ -1,6 +1,6 @@
 // app/api/tools/open-redirect/route.ts
 import { NextResponse } from 'next/server';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const { url } = await req.json();
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     // Forward to Flask backend and return the raw text response
-    const flaskResponse = await fetch('http://localhost:5000/api/openredirect', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/openredirect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url })

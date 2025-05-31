@@ -21,20 +21,45 @@ services:
       - pungoe_network
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.nextjs
     container_name: pungoe_app
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+      - kali-tools
     ports:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-ta_odiq}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      KALI_TOOLS_URL: http://kali-tools:5000
     networks:
       - pungoe_network
     restart: unless-stopped
+
+  kali-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.kali
+    container_name: pungoe_kali_tools
+    hostname: kali-tools
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./kali-tools:/app
+      - ./uploads:/app/uploads
+    environment:
+      FLASK_ENV: production
+      POSTGRES_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-ta_odiq}
+    networks:
+      - pungoe_network
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
 
 volumes:
   postgres_data:

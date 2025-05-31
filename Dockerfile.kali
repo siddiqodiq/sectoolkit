@@ -1,0 +1,94 @@
+FROM kalilinux/kali-rolling
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV HOME=/root
+ENV TOOLS_DIR=$HOME/tools
+
+RUN apt update && apt install -y wget && \
+    wget https://archive.kali.org/archive-keyring.gpg -O /usr/share/keyrings/kali-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/kali-archive-keyring.gpg] http://http.kali.org/kali kali-rolling main non-free contrib" > /etc/apt/sources.list && \
+    echo "deb [signed-by=/usr/share/keyrings/kali-archive-keyring.gpg] http://mirrors.ocf.berkeley.edu/kali kali-rolling main non-free contrib" >> /etc/apt/sources.list && \
+    apt update && apt upgrade -y
+
+RUN mkdir -p /app/uploads $TOOLS_DIR /usr/local/bin /root/bin && \
+    chmod 775 /usr/local/bin
+
+RUN apt install -y \
+    git \
+    golang-go \
+    python3 \
+    python3-pip \
+    python3-venv \
+    whois \
+    nmap \
+    wafw00f \
+    dnsrecon \
+    nuclei \
+    sqlmap \
+    python3-flask \
+    python3-flask-cors \
+    python3-flask-socketio \
+    python3-requests \
+    python3-gevent \
+    python3-eventlet \
+    && apt clean
+
+# Instalasi tools Go
+ENV GOPATH=/go
+ENV PATH="/go/bin:${PATH}"
+RUN go install github.com/tomnomnom/assetfinder@latest && \
+    go install github.com/projectdiscovery/httpx/cmd/httpx@latest && \
+    go install github.com/ffuf/ffuf@latest && \
+    go install github.com/tomnomnom/waybackurls@latest && \
+    go install github.com/tomnomnom/gf@latest && \
+    go install github.com/hahwul/dalfox/v2@latest && \
+    go install github.com/projectdiscovery/katana/cmd/katana@v1.1.0 && \
+    ln -s /go/bin/* /usr/local/bin/
+
+WORKDIR $TOOLS_DIR
+
+RUN git clone https://github.com/projectdiscovery/nuclei-templates.git $HOME/nuclei-templates
+
+RUN git clone https://github.com/devanshbatham/ParamSpider $TOOLS_DIR/ParamSpider && \
+    python3 -m venv $TOOLS_DIR/ParamSpider/venv
+
+WORKDIR $TOOLS_DIR/ParamSpider
+RUN ./venv/bin/pip install --no-cache-dir .
+
+WORKDIR $TOOLS_DIR
+
+# Corsy
+RUN git clone https://github.com/s0md3v/Corsy $TOOLS_DIR/Corsy && \
+    cd $TOOLS_DIR/Corsy && \
+    if [ -f "requirements.txt" ]; then \
+        python3 -m venv venv && \
+        venv/bin/pip install --no-cache-dir -r requirements.txt; \
+    fi
+
+# Oralyzer
+RUN git clone https://github.com/r0075h3ll/Oralyzer $TOOLS_DIR/Oralyzer && \
+    cd $TOOLS_DIR/Oralyzer && \
+    if [ -f "requirements.txt" ]; then \
+        pip3 install --no-cache-dir --break-system-packages -r requirements.txt; \
+    fi
+# GF patterns
+RUN mkdir -p $HOME/.gf && \
+    git clone https://github.com/tomnomnom/gf && \
+    cp gf/examples/* $HOME/.gf/ && \
+    git clone https://github.com/1ndianl33t/Gf-Patterns && \
+    cp Gf-Patterns/*.json $HOME/.gf/
+
+RUN nuclei -update-templates
+
+# Aplikasi
+WORKDIR /app
+COPY kali-tools/ .
+
+# Install dependencies aplikasi
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
+
+ENV PATH="/root/bin:${PATH}"
+ENV SERVICE_TYPE="scan"
+EXPOSE 5000
+
+CMD ["python3", "app.py"]

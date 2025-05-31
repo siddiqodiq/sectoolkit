@@ -1,6 +1,6 @@
 //app/api/tools/xss-scan/stop/route.ts
 import { NextResponse } from 'next/server';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
     console.log(`Stopping scan with session_id: ${session_id}`);
 
-    const flaskResponse = await fetch('http://localhost:5000/api/xss-scan/stop', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/xss-scan/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id }),

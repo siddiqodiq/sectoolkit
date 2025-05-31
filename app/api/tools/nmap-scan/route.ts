@@ -1,5 +1,6 @@
 // app/api/tools/nmap-scan/route.ts
 import { NextResponse } from 'next/server';
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     // Forward to Flask backend
-    const flaskResponse = await fetch('http://localhost:5000/api/nmap', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/nmap`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target, scan_type })

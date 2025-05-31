@@ -1,4 +1,5 @@
 // app/api/tools/waf/detector.ts
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 interface WAFDetectionResult {
     isProtected: boolean;
     wafName?: string;
@@ -8,7 +9,7 @@ interface WAFDetectionResult {
   export async function detectWAF(url: string): Promise<WAFDetectionResult> {
     try {
       // Panggil backend Flask untuk WAF detection
-      const flaskResponse = await fetch('http://localhost:5000/api/waf', {
+      const flaskResponse = await fetch(`${kaliToolsUrl}/api/waf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })

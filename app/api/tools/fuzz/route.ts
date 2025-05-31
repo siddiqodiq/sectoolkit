@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     flaskFormData.append('target', target);
     flaskFormData.append('file', file);
 
-    const flaskResponse = await fetch('http://localhost:5000/api/fuzz', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/fuzz`, {
       method: 'POST',
       body: flaskFormData,
       signal: req.signal || undefined,

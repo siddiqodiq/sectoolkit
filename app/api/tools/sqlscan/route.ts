@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     // Ambil FormData dari permintaan
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     // Forward FormData ke backend Flask
-    const flaskResponse = await fetch('http://localhost:5000/api/sqlscan', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/sqlscan`, {
       method: 'POST',
       body: formData,
       signal: req.signal || undefined,

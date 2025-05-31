@@ -1,6 +1,6 @@
 // app/api/tools/subdomain/active-check/route.ts
 import { NextResponse } from 'next/server';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       flaskFormData.append('domain', domain);
     }
 
-    const flaskResponse = await fetch('http://localhost:5000/api/scan/check-active', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/scan/check-active`, {
       method: 'POST',
       body: flaskFormData,
     });

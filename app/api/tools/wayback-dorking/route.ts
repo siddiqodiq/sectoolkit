@@ -1,6 +1,6 @@
 // app/api/tools/wayback-dorking/route.ts
 import { NextResponse } from 'next/server';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const { target } = await req.json();
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     // Forward to Flask backend
-    const flaskResponse = await fetch('http://localhost:5000/api/wayback', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/wayback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ target })

@@ -1,6 +1,7 @@
 // app/api/tools/subdomain/enumeration/route.ts
 import { NextResponse } from 'next/server';
 import { validateDomain } from '../../utils/validators';
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const { domain } = await req.json();
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const flaskResponse = await fetch('http://localhost:5000/api/scan', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain }),

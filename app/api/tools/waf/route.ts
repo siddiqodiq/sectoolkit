@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { detectWAF } from './detector';
 import { validateTargetUrl } from '../utils/validators';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 // app/api/tools/waf/route.ts
 // app/api/tools/waf/route.ts
 export async function POST(req: Request) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     // Panggil backend Flask dengan format yang DIA HARUSKAN
-    const flaskResponse = await fetch('http://localhost:5000/api/waf', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/waf`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain: targetDomain }) // Pastikan format ini sesuai Flask

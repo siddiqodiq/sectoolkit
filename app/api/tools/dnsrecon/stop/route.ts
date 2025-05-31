@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-
 export const dynamic = 'force-dynamic';
+
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     }
 
     // Forward to Flask backend
-    const flaskResponse = await fetch('http://localhost:5000/api/dnsrecon', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/dnsrecon`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain }),
