@@ -151,6 +151,7 @@ Berikut revisi lanjutan bagian dokumentasi yang menjelaskan solusi saat terjadi 
 ---
 
 ## 🐘 Error: PostgreSQL Authentication Failed
+![Screenshot 2025-05-31 133147](https://github.com/user-attachments/assets/eb0126c9-a22f-47b4-b934-dc9fe23e0586)
 
 Jika Anda melihat error seperti berikut pada log saat menjalankan Docker:
 
