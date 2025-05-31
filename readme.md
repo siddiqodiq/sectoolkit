@@ -43,7 +43,13 @@ Edit nilai-nilai yang diperlukan di dalam `.env` sesuai kebutuhan Anda.
 ### 3. Jalankan Docker Compose
 
 ```bash
-docker compose up --build
+docker compose build
+```
+
+Setelah proses build selesai, jalankan container dengan:
+
+```bash
+docker compose up -d
 ```
 
 Docker akan mem-build dan menjalankan 3 layanan:
