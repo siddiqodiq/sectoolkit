@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import prisma from '@/lib/db'
 import { authOptions } from '@/lib/auth'
-import { ollama } from 'ollama-ai-provider'
+import { ollama, createOllama } from 'ollama-ai-provider'
 import { streamText } from 'ai'
 
 export async function POST(req: Request) {
@@ -48,7 +48,10 @@ export async function POST(req: Request) {
     })
   }
 
-  const model = ollama(process.env.OLLAMA_MODEL || 'pentest-ai')
+  const model = createOllama({
+  model: process.env.OLLAMA_MODEL || 'pentest-ai',
+  baseURL: 'http://host.docker.internal:11434' // 👈 Kunci perubahan
+})
 
   try {
     const { textStream } = await streamText({
