@@ -151,18 +151,14 @@ Berikut revisi lanjutan bagian dokumentasi yang menjelaskan solusi saat terjadi 
 ---
 
 ## 🐘 Error: PostgreSQL Authentication Failed
+<img src="https://github.com/user-attachments/assets/eb0126c9-a22f-47b4-b934-dc9fe23e0586" width="300" />
+
 
 Jika Anda melihat error seperti berikut pada log saat menjalankan Docker:
 
 ```bash
 pungoe_postgres    | FATAL:  password authentication failed for user "postgres"
 pungoe_postgres    | DETAIL:  Connection matched pg_hba.conf line 100: "host all all all scram-sha-256"
-```
-
-Atau:
-
-```bash
-pungoe_app         |  ✓ Ready in 543ms
 ```
 
 Namun aplikasi tidak dapat terkoneksi ke database, **kemungkinan besar PostgreSQL di sistem lokal Anda sedang berjalan sebagai layanan (service)** dan bentrok dengan container PostgreSQL.
