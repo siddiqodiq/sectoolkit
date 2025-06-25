@@ -92,9 +92,10 @@ const handleLogin = async () => {
                 <label htmlFor="password" className="text-sm font-medium text-gray-300">
                   Password
                 </label>
+                {/*
                 <Link href="/forgot-password" className="text-xs text-blue-500 hover:text-blue-400 hover:underline ">
                   Forgot password?
-                </Link>
+                </Link>*/}
               </div>
               <div className="relative">
                 <Input
