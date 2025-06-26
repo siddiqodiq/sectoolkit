@@ -327,22 +327,6 @@ export function MainSidebar() {
               </p>
             </div>
           </div>
-
-          <Separator className="my-2 bg-gray-800" />
-
-          <div className="mt-2">
-            <p className="text-sm font-medium mb-2">Settings</p>
-            <SidebarMenu>
-              {settingsItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton className="hover-effect py-1.5">
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </div>
         </div>
       </SidebarFooter>
       <SidebarRail />

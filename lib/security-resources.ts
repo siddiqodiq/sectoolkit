@@ -15,7 +15,7 @@ export const payloadTemplates: SecurityResource[] = [
     name: "irwanjugabro payloads",
     type: "XSS",
     size: "1 KB",
-    filePath: "/resources/payloads/xssirwn.txt",
+    filePath: "/payloads/xssirwn.txt",
     sourceUrl: "",
     previewAvailable: true
   },
@@ -43,7 +43,7 @@ export const payloadTemplates: SecurityResource[] = [
     name: "🔥 💉XSS Bypass Payload 💉🔥 ",    
     type: "XSS",
     size: "2 KB",
-    filePath: "/resources/payloads/xssajib.txt",
+    filePath: "/payloads/xssajib.txt",
     sourceUrl: "",
     previewAvailable: true
   },
@@ -52,7 +52,7 @@ export const payloadTemplates: SecurityResource[] = [
      name: "DOS Attack Payload, for input forms to down the server",
     type: "BAC",
     size: "4.99 MB",
-    filePath: "/resources/payloads/5mb.txt",
+    filePath: "/payloads/5mb.txt",
     sourceUrl: "",
     previewAvailable: true
   },
@@ -61,7 +61,7 @@ export const payloadTemplates: SecurityResource[] = [
     name: "LFI Payloads",
     type: "LFI", 
     size: "1 KB",
-    filePath: "/resources/payloads/lfi.txt",
+    filePath: "/payloads/lfi.txt",
     sourceUrl: "",
     previewAvailable: true 
   },
@@ -79,7 +79,7 @@ export const payloadTemplates: SecurityResource[] = [
     name: "Cloudflare WAF Bypass Payload",
     type: "XSS",
     size: "2 KB",
-    filePath: "/resources/payloads/cloudflare.txt",
+    filePath: "/payloads/cloudflare.txt",
     sourceUrl: "",
     previewAvailable: true
   },
@@ -88,7 +88,7 @@ export const payloadTemplates: SecurityResource[] = [
     name: "Akamai WAF Bypass Payload",
     type: "XSS",
     size: "2 KB",
-    filePath: "/resources/payloads/akamai.txt",
+    filePath: "/payloads/akamai.txt",
     sourceUrl: "",
     previewAvailable: true
   },

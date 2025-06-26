@@ -1487,6 +1487,154 @@ def stop_nuclei_scan():
             return jsonify({"error": str(e)}), 500
     else:
         return jsonify({"error": "Scan not found or already stopped"}), 404
+    
+@app.route('/api/enumerate-params', methods=['POST'])
+def enumerate_params():
+    """Endpoint for web parameter enumeration"""
+    session_id = str(uuid.uuid4())
+    
+    try:
+        data = request.json if request.is_json else request.form.to_dict()
+        files = request.files
+        
+        # Validate input
+        if not data.get('pattern'):
+            return jsonify({"error": "Pattern is required"}), 400
+        
+        valid_patterns = ['idor', 'rce', 'sqli', 'lfi', 'img-traversal']
+        pattern = data['pattern']
+        if pattern not in valid_patterns:
+            return jsonify({"error": f"Invalid pattern. Valid options: {', '.join(valid_patterns)}"}), 400
+
+        # Prepare command
+        if 'file' in files:
+            # File mode
+            file = files['file']
+            if not allowed_file(file.filename):
+                return jsonify({"error": "Only text files are allowed"}), 400
+            
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{secure_filename(file.filename)}")
+            file.save(filepath)
+            
+            command = (
+                f"cat {filepath} | "
+                f"(waybackurls; gau) | "
+                f"sort -u | "
+                f"gf {pattern} | "
+                f"qsreplace | "
+                f"sort -u"
+            )
+        elif data.get('url'):
+            # Single URL mode
+            url = data['url']
+            if not is_valid_url(url):
+                return jsonify({"error": "Invalid URL format"}), 400
+            
+            command = (
+                f"(echo '{url}' | waybackurls; echo '{url}' | gau) | "
+                f"sort -u | "
+                f"gf {pattern} | "
+                f"qsreplace | "
+                f"sort -u"
+            )
+        else:
+            return jsonify({"error": "Either provide URL or file"}), 400
+
+        logger.debug(f"Executing command: {command}")
+        
+        # Create output queue
+        output_queue = Queue()
+        
+        def run_enumeration():
+            try:
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                    shell=True  # Required for pipes
+                )
+                
+                active_processes[session_id] = process
+                
+                # Stream output
+                for line in process.stdout:
+                    if session_id in active_processes:
+                        output_queue.put(line)
+                    else:
+                        break
+                
+                process.wait()
+                output_queue.put(None)
+            except Exception as e:
+                output_queue.put(f"[ERROR] {str(e)}")
+                output_queue.put(None)
+            finally:
+                # Cleanup
+                if 'filepath' in locals() and os.path.exists(filepath):
+                    os.remove(filepath)
+                if session_id in active_processes:
+                    del active_processes[session_id]
+        
+        Thread(target=run_enumeration).start()
+        
+        def generate():
+            try:
+                yield "\n"  # flush header early
+
+                while True:
+                    # ❗ Jika session_id sudah tidak ada, hentikan generator
+                    if session_id not in active_processes:
+                        break
+
+                    try:
+                        line = output_queue.get(timeout=1)
+                        if line is None:
+                            break
+                        yield line
+                    except Empty:
+                        continue
+            finally:
+                active_processes.pop(session_id, None)
+
+
+        
+        response = Response(generate(), mimetype='text/plain')
+        response.headers['X-Session-ID'] = session_id
+        response.headers['X-Pattern'] = pattern
+        return response
+    
+    except Exception as e:
+        if session_id in active_processes:
+            del active_processes[session_id]
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/enumerate-params/stop', methods=['POST'])
+def stop_enumeration():
+    """Stop running enumeration"""
+    data = request.json
+    if not data or 'session_id' not in data:
+        return jsonify({"error": "session_id is required"}), 400
+    
+    session_id = data['session_id']
+    
+    if session_id in active_processes:
+        process = active_processes[session_id]
+        try:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            
+            del active_processes[session_id]
+            return jsonify({"status": "stopped"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    else:
+        return jsonify({"error": "Process not found or already stopped"}), 404
 
 def is_valid_ip(ip):
     """Validasi format IP address"""

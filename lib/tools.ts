@@ -54,7 +54,7 @@ export const tools: Tool[] = [
     name: "URL Crawler [FUZZ]",
     description: "Crawl a website to find all links with fuzzing format.",
     category: "recon",
-    status: "maintenance",
+    status: "Available",
   },
   {
     id: "12",

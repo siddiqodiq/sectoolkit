@@ -383,7 +383,7 @@ function hashCode(str: string): number {
             {messages.length === 0 ? (
               <div className="flex h-full items-center justify-center">
                 <div className="text-center max-w-md p-6 rounded-lg bg-gray-800/50 border border-gray-700">
-                  <h3 className="text-xl font-bold mb-2 gradient-text">Welcome to PentestAI</h3>
+                  <h3 className="text-xl font-bold mb-2 gradient-text">Welcome to Pungoe Pentest</h3>
                   <p className="text-gray-400">
                     Your AI-powered penetration testing assistant. Ask questions about security testing, vulnerability
                     assessment, or use the tools sidebar to access specialized functions.

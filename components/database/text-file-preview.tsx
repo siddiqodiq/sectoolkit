@@ -31,24 +31,25 @@ export const TextFilePreview = ({
   }, [open, resource])
 
   const fetchFileContent = async () => {
-    try {
-      setLoading(true)
-      const filePath = resource.filePath.replace('public/', '')
-      const response = await fetch(`/${encodeURIComponent(filePath)}`)
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      
-      const text = await response.text()
-      setFileContent(text)
-    } catch (error) {
-      console.error("Error loading file:", error)
-      setFileContent("Failed to load file content")
-    } finally {
-      setLoading(false)
-    }
+  try {
+    setLoading(true)
+    const filePath = resource.filePath.replace(/^public\//, '')
+    const url = `${window.location.origin}/${filePath}`
+    console.log('Fetching:', url)
+
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+
+    const text = await response.text()
+    setFileContent(text)
+  } catch (error) {
+    console.error("Error loading file:", error)
+    setFileContent("Failed to load file content")
+  } finally {
+    setLoading(false)
   }
+}
+
 
   const handleDownload = () => {
     if (resource.filePath) {
