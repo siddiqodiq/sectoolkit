@@ -19,6 +19,7 @@ import { XssScanModal } from "./tools/xss-scan-modal"
 import { SqlScanModal } from "./tools/sqlmap-modal"
 import { DnsReconModal } from "./tools/dnsrecon-modal"
 import { NucleiScanModal } from "./tools/nuclei-scan-modal"
+import { ParamEnumModal } from "./tools/param-enum-modal"
 
 interface ToolModalProps {
   toolId: string | null
@@ -188,6 +189,14 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
      case "DNS Recon":
   return (
     <DnsReconModal
+      tool={selectedTool}
+      isOpen={internalIsOpen}
+      onClose={handleClose}
+      onSendToChat={onSendToChat}
+    />)
+    case "Web Parameter Enumerator":
+      return(
+      <ParamEnumModal
       tool={selectedTool}
       isOpen={internalIsOpen}
       onClose={handleClose}

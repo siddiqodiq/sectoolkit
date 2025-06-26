@@ -1365,7 +1365,7 @@ def stop_dnsrecon():
     
 @app.route('/api/nuclei-scan', methods=['POST'])
 def nuclei_scan():
-    """Endpoint for Nuclei vulnerability scanning"""
+    """Improved Nuclei scan endpoint with better stop handling"""
     session_id = str(uuid.uuid4())
     
     try:
@@ -1374,16 +1374,16 @@ def nuclei_scan():
             return jsonify({"error": "Target is required"}), 400
         
         target = data['target']
-        scan_type = data.get('scan_type', 'single')  # 'single' or 'all'
+        scan_type = data.get('scan_type', 'single')
+        valid_patterns = ['ssrf', 'sqli', 'xss', 'lfi', 'ssti', 'redirect']
         
         # Validate scan type and pattern
-        valid_patterns = ['ssrf', 'sqli', 'xss', 'lfi', 'ssti', 'redirect']
         if scan_type == 'single':
             pattern = data.get('pattern')
             if not pattern or pattern not in valid_patterns:
                 return jsonify({"error": f"Valid pattern required: {', '.join(valid_patterns)}"}), 400
         
-        # Prepare command pipeline
+        # Prepare command
         if scan_type == 'single':
             command = (
                 f"echo '{target}' | "
@@ -1392,7 +1392,7 @@ def nuclei_scan():
                 f"gf {pattern} | "
                 f"nuclei -t ~/nuclei-templates/dast/vulnerabilities/{pattern} -dast"
             )
-        else:  # all scan
+        else:
             command = (
                 f"echo '{target}' | "
                 f"gau --fc 200 | "
@@ -1405,7 +1405,6 @@ def nuclei_scan():
         
         logger.debug(f"Executing Nuclei scan: {command}")
         
-        # Create output queue
         output_queue = Queue()
         
         def run_scan():
@@ -1417,17 +1416,15 @@ def nuclei_scan():
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
-                    shell=True  # Required for pipeline
+                    shell=True
                 )
                 
                 active_processes[session_id] = process
                 
-                # Stream output
                 for line in process.stdout:
-                    if session_id in active_processes:
-                        output_queue.put(line)
-                    else:
+                    if session_id not in active_processes:  # Check if stopped
                         break
+                    output_queue.put(line)
                 
                 process.wait()
                 output_queue.put(None)
@@ -1435,14 +1432,19 @@ def nuclei_scan():
                 output_queue.put(f"[ERROR] {str(e)}")
                 output_queue.put(None)
             finally:
-                if session_id in active_processes:
-                    del active_processes[session_id]
+                active_processes.pop(session_id, None)
         
         Thread(target=run_scan).start()
         
         def generate():
             try:
+                yield "\n"  # Early flush
+                
                 while True:
+                    # Critical: Check if process was stopped
+                    if session_id not in active_processes:
+                        break
+                    
                     try:
                         line = output_queue.get(timeout=1)
                         if line is None:
@@ -1451,37 +1453,40 @@ def nuclei_scan():
                     except Empty:
                         continue
             finally:
-                if session_id in active_processes:
-                    del active_processes[session_id]
+                active_processes.pop(session_id, None)
         
-        return Response(generate(), mimetype='text/plain'), 200, {
-            'X-Session-ID': session_id,
-            'X-Scan-Type': scan_type
-        }
+        response = Response(generate(), mimetype='text/plain')
+        response.headers['X-Session-ID'] = session_id
+        response.headers['X-Scan-Type'] = scan_type
+        return response
     
     except Exception as e:
-        if session_id in active_processes:
-            del active_processes[session_id]
+        active_processes.pop(session_id, None)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/nuclei-scan/stop', methods=['POST'])
 def stop_nuclei_scan():
-    """Stop running Nuclei scan"""
+    """Stop running nuclei scan"""
     data = request.json
     if not data or 'session_id' not in data:
         return jsonify({"error": "session_id is required"}), 400
-
+    
     session_id = data['session_id']
-
+    
     if session_id in active_processes:
         process = active_processes[session_id]
         try:
+            # Send SIGTERM first
             process.terminate()
             try:
+                # Wait gracefully
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
+                # Force kill if not responding
                 process.kill()
-            del active_processes[session_id]
+            
+            # Ensure cleanup
+            active_processes.pop(session_id, None)
             return jsonify({"status": "stopped"})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -1492,7 +1497,7 @@ def stop_nuclei_scan():
 def enumerate_params():
     """Endpoint for web parameter enumeration"""
     session_id = str(uuid.uuid4())
-    
+    logger.info(f"[ENUMERATE] Session started: {session_id}")  # Tambahkan log saat session dibuat
     try:
         data = request.json if request.is_json else request.form.to_dict()
         files = request.files
@@ -1605,10 +1610,10 @@ def enumerate_params():
         response.headers['X-Session-ID'] = session_id
         response.headers['X-Pattern'] = pattern
         return response
-    
     except Exception as e:
         if session_id in active_processes:
             del active_processes[session_id]
+        logger.error(f"[ENUMERATE] Error in session {session_id}: {str(e)}")  # Log error dengan session id
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/enumerate-params/stop', methods=['POST'])
@@ -1628,12 +1633,14 @@ def stop_enumeration():
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
-            
             del active_processes[session_id]
+            logger.info(f"[ENUMERATE] Session stopped: {session_id}")  # Tambahkan log saat session distop
             return jsonify({"status": "stopped"})
         except Exception as e:
+            logger.error(f"[ENUMERATE] Error stopping session {session_id}: {str(e)}")  # Log error stop
             return jsonify({"error": str(e)}), 500
     else:
+        logger.warning(f"[ENUMERATE] Stop requested for unknown session: {session_id}")  # Log jika session tidak ditemukan
         return jsonify({"error": "Process not found or already stopped"}), 404
 
 def is_valid_ip(ip):

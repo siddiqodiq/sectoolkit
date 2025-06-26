@@ -126,7 +126,15 @@ export const tools: Tool[] = [
     description: "Exploit Local File Inclusion vulnerabilities.",
     category: "exploit",
     status: "Under Development",
-  }
+  },
+  {
+    id: "20",
+    name: "Web Parameter Enumerator",
+    description: "Enumerate web parameters to find vulnerabilities.",
+    category: "recon",
+    status: "Available",
+  },
+
 ]
 
 export const getCategoryLabel = (category: string): string => {

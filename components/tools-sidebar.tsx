@@ -85,6 +85,7 @@ export function ToolsSidebar({ onSelectTool, activeTool }: ToolsSidebarProps) {
       "URL Crawler [FUZZ]": Pickaxe,
       "Deep URL Crawler": Sword,
       "Wayback Machine Dorking": FolderClock,
+      "Web Parameter Enumerator": Map,
       "URL Fuzzer": FileSearch,
       "CORS Misc Scanner": Antenna,
       "Open Redirect Exploiter": DoorOpen,
