@@ -7,6 +7,7 @@ import subprocess
 import re
 import logging
 import requests
+from pathlib import Path
 import json
 import uuid
 from queue import Queue, Empty
@@ -26,6 +27,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")  # Enable SocketIO with CORS
 
 # Configuration
 UPLOAD_FOLDER = './uploads'
+Path(UPLOAD_FOLDER).mkdir(exist_ok=True, mode=0o777)
 ALLOWED_EXTENSIONS = {'txt'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 1 * 1024 * 1024  # 1MB limit
@@ -1495,9 +1497,10 @@ def stop_nuclei_scan():
     
 @app.route('/api/enumerate-params', methods=['POST'])
 def enumerate_params():
-    """Endpoint for web parameter enumeration"""
+    """Endpoint for web parameter enumeration with empty result handling"""
     session_id = str(uuid.uuid4())
-    logger.info(f"[ENUMERATE] Session started: {session_id}")  # Tambahkan log saat session dibuat
+    found_params = False  # Flag untuk menandai ditemukannya parameter
+    
     try:
         data = request.json if request.is_json else request.form.to_dict()
         files = request.files
@@ -1551,6 +1554,7 @@ def enumerate_params():
         output_queue = Queue()
         
         def run_enumeration():
+            nonlocal found_params
             try:
                 process = subprocess.Popen(
                     command,
@@ -1559,7 +1563,7 @@ def enumerate_params():
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
-                    shell=True  # Required for pipes
+                    shell=True
                 )
                 
                 active_processes[session_id] = process
@@ -1567,21 +1571,24 @@ def enumerate_params():
                 # Stream output
                 for line in process.stdout:
                     if session_id in active_processes:
-                        output_queue.put(line)
+                        if line.strip():  # Hanya line yang tidak kosong
+                            found_params = True
+                            output_queue.put(line)
                     else:
                         break
                 
                 process.wait()
+                if not found_params:
+                    output_queue.put("[INFO] No parameters found matching the specified pattern\n")
                 output_queue.put(None)
             except Exception as e:
-                output_queue.put(f"[ERROR] {str(e)}")
+                output_queue.put(f"[ERROR] {str(e)}\n")
                 output_queue.put(None)
             finally:
                 # Cleanup
                 if 'filepath' in locals() and os.path.exists(filepath):
                     os.remove(filepath)
-                if session_id in active_processes:
-                    del active_processes[session_id]
+                active_processes.pop(session_id, None)
         
         Thread(target=run_enumeration).start()
         
@@ -1590,7 +1597,6 @@ def enumerate_params():
                 yield "\n"  # flush header early
 
                 while True:
-                    # ❗ Jika session_id sudah tidak ada, hentikan generator
                     if session_id not in active_processes:
                         break
 
@@ -1603,17 +1609,15 @@ def enumerate_params():
                         continue
             finally:
                 active_processes.pop(session_id, None)
-
-
         
         response = Response(generate(), mimetype='text/plain')
         response.headers['X-Session-ID'] = session_id
         response.headers['X-Pattern'] = pattern
+        response.headers['X-Found-Params'] = str(found_params).lower()
         return response
+    
     except Exception as e:
-        if session_id in active_processes:
-            del active_processes[session_id]
-        logger.error(f"[ENUMERATE] Error in session {session_id}: {str(e)}")  # Log error dengan session id
+        active_processes.pop(session_id, None)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/enumerate-params/stop', methods=['POST'])
@@ -1633,15 +1637,59 @@ def stop_enumeration():
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
+            
             del active_processes[session_id]
-            logger.info(f"[ENUMERATE] Session stopped: {session_id}")  # Tambahkan log saat session distop
             return jsonify({"status": "stopped"})
         except Exception as e:
-            logger.error(f"[ENUMERATE] Error stopping session {session_id}: {str(e)}")  # Log error stop
             return jsonify({"error": str(e)}), 500
     else:
-        logger.warning(f"[ENUMERATE] Stop requested for unknown session: {session_id}")  # Log jika session tidak ditemukan
         return jsonify({"error": "Process not found or already stopped"}), 404
+    
+@app.route('/api/subzy-scan', methods=['POST'])
+def subzy_scan():
+    """Endpoint for subdomain takeover detection with Subzy"""
+    try:
+        data = request.json
+        if not data or not data.get('domain'):
+            return jsonify({"error": "Domain is required"}), 400
+
+        domain = data['domain']
+        if not is_valid_domain(domain):
+            return jsonify({"error": "Invalid domain format"}), 400
+
+        # Prepare base command
+        command = ["subzy", "run", "--target", domain]
+
+        # Add optional flags
+        if data.get('verify_ssl'):
+            command.append("--verify_ssl")
+        if data.get('https'):
+            command.append("--https")
+
+        logger.debug(f"Executing Subzy command: {' '.join(command)}")
+
+        # Execute command
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            universal_newlines=True
+        )
+
+        stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            return jsonify({
+                "error": "Subzy execution failed",
+                "details": stderr.strip()
+            }), 500
+
+        return Response(stdout, mimetype='text/plain')
+
+    except Exception as e:
+        logger.error(f"Subzy scan error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 def is_valid_ip(ip):
     """Validasi format IP address"""

@@ -1,74 +1,149 @@
-The TypeScript errors you're encountering indicate that you're trying to pass a `data` prop to `PayloadTable` and `WordlistTable` components, but these components don't accept any props (they're defined without any parameters).
+@app.route('/api/enumerate-params', methods=['POST'])
+def enumerate_params():
+    """Endpoint for web parameter enumeration"""
+    session_id = str(uuid.uuid4())
+    logger.info(f"[ENUMERATE] Session started: {session_id}")  # Tambahkan log saat session dibuat
+    try:
+        data = request.json if request.is_json else request.form.to_dict()
+        files = request.files
+        
+        # Validate input
+        if not data.get('pattern'):
+            return jsonify({"error": "Pattern is required"}), 400
+        
+        valid_patterns = ['idor', 'rce', 'sqli', 'lfi', 'img-traversal']
+        pattern = data['pattern']
+        if pattern not in valid_patterns:
+            return jsonify({"error": f"Invalid pattern. Valid options: {', '.join(valid_patterns)}"}), 400
 
-Here's how to fix the issues:
+        # Prepare command
+        if 'file' in files:
+            # File mode
+            file = files['file']
+            if not allowed_file(file.filename):
+                return jsonify({"error": "Only text files are allowed"}), 400
+            
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{secure_filename(file.filename)}")
+            file.save(filepath)
+            
+            command = (
+                f"cat {filepath} | "
+                f"(waybackurls; gau) | "
+                f"sort -u | "
+                f"gf {pattern} | "
+                f"qsreplace | "
+                f"sort -u"
+            )
+        elif data.get('url'):
+            # Single URL mode
+            url = data['url']
+            if not is_valid_url(url):
+                return jsonify({"error": "Invalid URL format"}), 400
+            
+            command = (
+                f"(echo '{url}' | waybackurls; echo '{url}' | gau) | "
+                f"sort -u | "
+                f"gf {pattern} | "
+                f"qsreplace | "
+                f"sort -u"
+            )
+        else:
+            return jsonify({"error": "Either provide URL or file"}), 400
 
-1. First, update your `PayloadTable` component to accept a `data` prop:
+        logger.debug(f"Executing command: {command}")
+        
+        # Create output queue
+        output_queue = Queue()
+        
+        def run_enumeration():
+            try:
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                    shell=True  # Required for pipes
+                )
+                
+                active_processes[session_id] = process
+                
+                # Stream output
+                for line in process.stdout:
+                    if session_id in active_processes:
+                        output_queue.put(line)
+                    else:
+                        break
+                
+                process.wait()
+                output_queue.put(None)
+            except Exception as e:
+                output_queue.put(f"[ERROR] {str(e)}")
+                output_queue.put(None)
+            finally:
+                # Cleanup
+                if 'filepath' in locals() and os.path.exists(filepath):
+                    os.remove(filepath)
+                if session_id in active_processes:
+                    del active_processes[session_id]
+        
+        Thread(target=run_enumeration).start()
+        
+        def generate():
+            try:
+                yield "\n"  # flush header early
 
-```tsx
-// components/database/payload-table.tsx
-interface PayloadTableProps {
-  data: {
-    id: string;
-    name: string;
-    type: string;
-    size: string;
-    filePath?: string;
-    sourceUrl?: string;
-    previewAvailable: boolean;
-  }[];
-}
+                while True:
+                    # ❗ Jika session_id sudah tidak ada, hentikan generator
+                    if session_id not in active_processes:
+                        break
 
-export const PayloadTable = ({ data }: PayloadTableProps) => {
-  // ... rest of the component code remains the same
-  // Just replace all instances of `payloadTemplates` with `data`
-}
-```
+                    try:
+                        line = output_queue.get(timeout=1)
+                        if line is None:
+                            break
+                        yield line
+                    except Empty:
+                        continue
+            finally:
+                active_processes.pop(session_id, None)
 
-2. Similarly, update your `WordlistTable` component:
 
-```tsx
-// components/database/wordlist-table.tsx
-interface WordlistTableProps {
-  data: {
-    id: string;
-    name: string;
-    type: string;
-    size?: string;
-    filePath?: string;
-    sourceUrl?: string;
-    previewAvailable: boolean;
-  }[];
-}
+        
+        response = Response(generate(), mimetype='text/plain')
+        response.headers['X-Session-ID'] = session_id
+        response.headers['X-Pattern'] = pattern
+        return response
+    except Exception as e:
+        if session_id in active_processes:
+            del active_processes[session_id]
+        logger.error(f"[ENUMERATE] Error in session {session_id}: {str(e)}")  # Log error dengan session id
+        return jsonify({"error": str(e)}), 500
 
-export const WordlistTable = ({ data }: WordlistTableProps) => {
-  // ... rest of the component code remains the same
-  // Just replace all instances of `wordlists` with `data`
-}
-```
-
-3. Alternatively, if you prefer to keep using the imported `payloadTemplates` and `wordlists` directly in the components (as your current implementation does), then you should remove the `data` prop being passed in your page component:
-
-```tsx
-// In app/database/page.tsx
-// Change this:
-<PayloadTable data={payloadTemplates} />
-
-// To this:
-<PayloadTable />
-```
-
-And similarly for the WordlistTable:
-
-```tsx
-// Change this:
-<WordlistTable data={wordlists} />
-
-// To this:
-<WordlistTable />
-```
-
-Choose one of these approaches based on your needs:
-- If you want the tables to be reusable with different data sources, use the first approach (adding props)
-- If these tables will always use the data from `security-resources.ts`, use the second approach (remove the prop passing)
-
-Since your current table components are already using the imported data directly, the simpler solution would be to remove the prop passing from your page component.  
+@app.route('/api/enumerate-params/stop', methods=['POST'])
+def stop_enumeration():
+    """Stop running enumeration"""
+    data = request.json
+    if not data or 'session_id' not in data:
+        return jsonify({"error": "session_id is required"}), 400
+    
+    session_id = data['session_id']
+    
+    if session_id in active_processes:
+        process = active_processes[session_id]
+        try:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            del active_processes[session_id]
+            logger.info(f"[ENUMERATE] Session stopped: {session_id}")  # Tambahkan log saat session distop
+            return jsonify({"status": "stopped"})
+        except Exception as e:
+            logger.error(f"[ENUMERATE] Error stopping session {session_id}: {str(e)}")  # Log error stop
+            return jsonify({"error": str(e)}), 500
+    else:
+        logger.warning(f"[ENUMERATE] Stop requested for unknown session: {session_id}")  # Log jika session tidak ditemukan
+        return jsonify({"error": "Process not found or already stopped"}), 404

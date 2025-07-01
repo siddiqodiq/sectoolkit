@@ -89,46 +89,15 @@ export function CorsScannerModal({ tool, isOpen, onClose, onSendToChat }: CorsSc
     }
   };
 
-  const formatCorsResults = (rawOutput: string, target: string): string => {
-    try {
-      // Clean ANSI codes first
-      const cleanOutput = stripAnsiCodes(rawOutput);
-      
-      // Extract important information
-      const lines = cleanOutput.split('\n').filter(line => line.trim());
-      
-      let severity = "Unknown";
-      let description = "";
-      let exploitation = "";
-      let acaoHeader = "";
-      let acacHeader = "";
-      
-      for (const line of lines) {
-        if (line.includes("Severity:")) {
-          severity = line.split("Severity:")[1].trim();
-        } else if (line.includes("Description:")) {
-          description = line.split("Description:")[1].trim();
-        } else if (line.includes("Exploitation:")) {
-          exploitation = line.split("Exploitation:")[1].trim();
-        } else if (line.includes("ACAO Header:")) {
-          acaoHeader = line.split("ACAO Header:")[1].trim();
-        } else if (line.includes("ACAC Header:")) {
-          acacHeader = line.split("ACAC Header:")[1].trim();
-        }
-      }
-      
-      return `CORS MISCONFIGURATION SCAN RESULTS\n\n` +
-        `• Target: ${target}\n` +
-        `• Severity: ${severity}\n` +
-        `• Description: ${description}\n` +
-        `• Exploitation: ${exploitation}\n` +
-        `• ACAO Header: ${acaoHeader || 'None'}\n` +
-        `• ACAC Header: ${acacHeader || 'None'}\n\n` ;
-    } catch (err) {
-      console.error('Format error:', err);
-      return 'Could not format results';
-    }
-  };
+  const formatCorsResults = (rawOutput: string, target: any): string => {
+  try {
+    // Hanya hilangkan kode warna ANSI, tampilkan hasil mentah
+    return stripAnsiCodes(rawOutput);
+  } catch (err) {
+    console.error('Format error:', err);
+    return 'Could not format results';
+  }
+};
 
   const handleCloseAttempt = () => {
     if (isLoading) {

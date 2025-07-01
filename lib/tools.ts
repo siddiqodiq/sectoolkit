@@ -93,13 +93,6 @@ export const tools: Tool[] = [
     status: "Available",
   },
   {
-    id: "10",
-    name: "CVSS Scoring",
-    description: "Calculate CVSS score for vulnerabilities.",
-    category: "utils",
-    status: "Available",
-  },
-  {
     id: "15",
     name: "Wayback Machine Dorking",
     description: "Use the Wayback Machine to find historical data.",
@@ -132,6 +125,34 @@ export const tools: Tool[] = [
     name: "Web Parameter Enumerator",
     description: "Enumerate web parameters to find vulnerabilities.",
     category: "recon",
+    status: "Available",
+  },
+  {
+    id: "21",
+    name: "Subdomain Takeover",
+    description: "Check for subdomain takeover vulnerabilities.",
+    category: "exploit",
+    status: "Available", 
+  },
+  {
+    id : "22",
+    name: "Decoder/Encoder",
+    description: "Convert between different encoding schemes",
+    category: "utils",
+    status: "Available", 
+  },
+  {
+  id: "23",
+    name: "JWT Debugger",
+    description: "Decode, verify, and debug JWT tokens.",
+    category: "utils",
+    status: "Available",
+  },
+   {
+    id: "10",
+    name: "CVSS Scoring",
+    description: "Calculate CVSS score for vulnerabilities.",
+    category: "utils",
     status: "Available",
   },
 

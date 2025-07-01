@@ -1,4 +1,3 @@
-// components/tools/wayback-dorking-modal.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { BaseToolModal } from "./base-tool-modal";
@@ -10,7 +9,6 @@ import {
   CardTitle, 
   CardDescription, 
   CardFooter,
-
 } from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -21,14 +19,16 @@ import {
   Play, 
   Copy, 
   Download, 
-  Check, 
+  Check as CheckIcon,
   Send,
   AlertCircle,
-  History
+  History,
+  Filter
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { AlertDescription } from "../ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface WaybackDorkingModalProps {
   tool: Tool;
@@ -37,17 +37,92 @@ interface WaybackDorkingModalProps {
   onSendToChat?: (content: string) => void;
 }
 
+const FILE_TYPE_FILTERS = [
+  { id: 'html', label: 'HTML', value: 'text/html' },
+  { id: 'javascript', label: 'JavaScript', value: 'text/javascript|application/javascript' },
+  { id: 'json', label: 'JSON', value: 'application/json' },
+  { id: 'xml', label: 'XML', value: 'text/xml|application/xml' },
+  { id: 'php', label: 'PHP', value: 'text/x-php|application/x-php|\\.php' },
+  { id: 'plain', label: 'Plain Text', value: 'text/plain' },
+  { id: 'csv', label: 'CSV', value: 'text/csv' },
+  { id: 'pdf', label: 'PDF', value: 'application/pdf' },
+  { id: 'word', label: 'Word Docs', value: 'application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+  { id: 'excel', label: 'Excel Files', value: 'application/vnd.ms-excel|application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+  { id: 'powerpoint', label: 'PowerPoint', value: 'application/vnd.ms-powerpoint|application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+  { id: 'archive', label: 'Archives', value: 'application/zip|application/x-rar-compressed|application/x-7z-compressed|application/x-tar|application/gzip|\\.zip|\\.rar|\\.7z|\\.tar|\\.gz' },
+  { id: 'db', label: 'Database Files', value: '\\.db|\\.sqlite|\\.mdb|\\.accdb' },
+  { id: 'sql', label: 'SQL Files', value: '\\.sql' },
+];
+
+const KEYWORD_FILTERS = [
+  { id: 'admin', label: 'Admin', value: 'admin' },
+  { id: 'root', label: 'Root', value: 'root' },
+  { id: 'dbaccess', label: 'Database Access', value: 'dbaccess|database' },
+  { id: 'config', label: 'Config', value: 'config|configuration' },
+  { id: 'backup', label: 'Backup', value: 'backup' },
+  { id: 'login', label: 'Login', value: 'login|signin' },
+  { id: 'secret', label: 'Secrets', value: 'secret|password|credential' },
+  { id: 'api', label: 'API', value: 'api' },
+];
+
 export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: WaybackDorkingModalProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<string[]>([]);
+  const [allResults, setAllResults] = useState<string[]>([]);
+  const [filteredResults, setFilteredResults] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState("");
   const [copied, setCopied] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [selectedFileFilters, setSelectedFileFilters] = useState<Record<string, boolean>>({});
+  const [selectedKeywordFilters, setSelectedKeywordFilters] = useState<Record<string, boolean>>({});
+  const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
 
+  // Apply filters whenever allResults or filters change
+  useEffect(() => {
+    if (allResults.length === 0) {
+      setFilteredResults([]);
+      return;
+    }
+
+    // Get all selected file filters
+    const activeFileFilters = FILE_TYPE_FILTERS
+      .filter(filter => selectedFileFilters[filter.id])
+      .map(filter => filter.value)
+      .join('|');
+
+    // Get all selected keyword filters
+    const activeKeywordFilters = KEYWORD_FILTERS
+      .filter(filter => selectedKeywordFilters[filter.id])
+      .map(filter => filter.value)
+      .join('|');
+
+    // If no filters are selected, show empty array (we'll handle display logic separately)
+    if (!activeFileFilters && !activeKeywordFilters) {
+      setFilteredResults([]);
+      return;
+    }
+
+    // Create regex patterns for filtering
+    const fileFilterRegex = activeFileFilters ? new RegExp(`(${activeFileFilters})`, 'i') : null;
+    const keywordFilterRegex = activeKeywordFilters ? new RegExp(`(${activeKeywordFilters})`, 'i') : null;
+
+    const filtered = allResults.filter(url => {
+      const matchesFile = activeFileFilters ? fileFilterRegex?.test(url) : false;
+      const matchesKeyword = activeKeywordFilters ? keywordFilterRegex?.test(url) : false;
+      
+      // If both filters are active, match either one (OR condition)
+      if (activeFileFilters && activeKeywordFilters) {
+        return matchesFile || matchesKeyword;
+      }
+      // Otherwise match the active filter
+      return activeFileFilters ? matchesFile : matchesKeyword;
+    });
+
+    setFilteredResults(filtered);
+  }, [allResults, selectedFileFilters, selectedKeywordFilters]);
+
   const handleRunTool = async () => {
-    // Validate target doesn't contain protocol
     if (target.includes('://')) {
       setError("Please enter domain without protocol (http/https)");
       return;
@@ -60,7 +135,10 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
 
     setIsLoading(true);
     setError(null);
-    setResults([]);
+    setAllResults([]);
+    setFilteredResults([]);
+    setSelectedFileFilters({});
+    setSelectedKeywordFilters({});
 
     try {
       const response = await fetch('/api/tools/wayback-dorking', {
@@ -74,7 +152,6 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
         throw new Error(errorData.error || 'Failed to fetch Wayback URLs');
       }
 
-      // Handle streaming response
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
 
@@ -88,14 +165,13 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
         
-        // Update results in real-time
         const newResults = fullContent.split('\n').filter(Boolean);
-        setResults(newResults);
+        setAllResults(newResults);
       }
 
       toast({
         title: "Wayback Dorking completed",
-        description: `Found ${results.length} historical URLs`,
+        description: `Found ${allResults.length} historical URLs`,
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
@@ -126,7 +202,9 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
   };
 
   const handleDownloadResults = () => {
-    if (results.length === 0) {
+    const resultsToDownload = filteredResults.length > 0 ? filteredResults : allResults;
+    
+    if (resultsToDownload.length === 0) {
       toast({
         title: "No results to download",
         description: "There are no URLs to download",
@@ -136,7 +214,7 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
     }
 
     try {
-      const fileContent = results.join('\n');
+      const fileContent = resultsToDownload.join('\n');
       const fileName = `wayback-urls-${target}-${new Date().toISOString().slice(0, 10)}.txt`;
 
       const blob = new Blob([fileContent], { type: 'text/plain' });
@@ -163,8 +241,50 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
   };
 
   const formatResults = () => {
-    if (results.length === 0) return "No historical URLs found";
-    return `WAYBACK URL RESULTS (${results.length} URLs found)\n\n${results.map(url => `• ${url}`).join('\n')}`;
+    const resultsToFormat = filteredResults.length > 0 ? filteredResults : allResults;
+    const count = resultsToFormat.length;
+    
+    if (count === 0) {
+      return allResults.length > 0 ? "No results match current filters" : "No historical URLs found";
+    }
+    
+    let header = `WAYBACK URL RESULTS (${count} URLs found)`;
+    
+    // Add filter info if any filters are active
+    const activeFileFilters = FILE_TYPE_FILTERS
+      .filter(filter => selectedFileFilters[filter.id])
+      .map(filter => filter.label);
+      
+    const activeKeywordFilters = KEYWORD_FILTERS
+      .filter(filter => selectedKeywordFilters[filter.id])
+      .map(filter => filter.label);
+      
+    const allActiveFilters = [...activeFileFilters, ...activeKeywordFilters];
+    
+    if (allActiveFilters.length > 0) {
+      header += `\nFiltered by: ${allActiveFilters.join(', ')}`;
+    }
+    
+    return `${header}\n\n${resultsToFormat.map(url => `• ${url}`).join('\n')}`;
+  };
+
+  const toggleFileFilter = (filterId: string) => {
+    setSelectedFileFilters(prev => ({
+      ...prev,
+      [filterId]: !prev[filterId]
+    }));
+  };
+
+  const toggleKeywordFilter = (filterId: string) => {
+    setSelectedKeywordFilters(prev => ({
+      ...prev,
+      [filterId]: !prev[filterId]
+    }));
+  };
+
+  const clearAllFilters = () => {
+    setSelectedFileFilters({});
+    setSelectedKeywordFilters({});
   };
 
   return (
@@ -194,7 +314,6 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
                   value={target}
                   onChange={(e) => {
                     const value = e.target.value.trim();
-                    // Remove protocol if accidentally entered
                     setTarget(value.replace(/^https?:\/\//i, ''));
                   }}
                   disabled={isLoading}
@@ -210,11 +329,11 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
                 </AlertDescription>
               </Alert>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex gap-2">
               <Button
                 onClick={handleRunTool}
                 disabled={isLoading || !target}
-                className="w-full"
+                className="flex-1"
               >
                 {isLoading ? (
                   <>
@@ -228,19 +347,101 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
                   </>
                 )}
               </Button>
+              {allResults.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filters
+                </Button>
+              )}
             </CardFooter>
           </Card>
 
-          {results.length > 0 && (
+          {showFilters && allResults.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Historical URLs Found</CardTitle>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Filter Results</CardTitle>
+                    <CardDescription>
+                      {filteredResults.length > 0 ? (
+                        <span className="text-green-500">{filteredResults.length} results match filters</span>
+                      ) : (
+                        <span className="text-muted-foreground">No filters active</span>
+                      )}
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={clearAllFilters}
+                    disabled={Object.keys(selectedFileFilters).length === 0 && Object.keys(selectedKeywordFilters).length === 0}
+                  >
+                    Clear All
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="relative">
-                  <pre className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto whitespace-pre-wrap">
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-medium mb-3">File Types</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {FILE_TYPE_FILTERS.map(filter => (
+                      <div key={filter.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`file-${filter.id}`}
+                          checked={!!selectedFileFilters[filter.id]}
+                          onCheckedChange={() => toggleFileFilter(filter.id)}
+                        />
+                        <Label htmlFor={`file-${filter.id}`}>{filter.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Keywords</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    {KEYWORD_FILTERS.map(filter => (
+                      <div key={filter.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`keyword-${filter.id}`}
+                          checked={!!selectedKeywordFilters[filter.id]}
+                          onCheckedChange={() => toggleKeywordFilter(filter.id)}
+                        />
+                        <Label htmlFor={`keyword-${filter.id}`}>{filter.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {filteredResults.length > 0 ? (
+                  <>Filtered Results ({filteredResults.length} of {allResults.length})</>
+                ) : (
+                  <>All Results ({allResults.length})</>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {filteredResults.length === 0 && allResults.length > 0 && (
+                  <span className="text-muted-foreground">Select filters above to narrow down results</span>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="relative">
+                <div className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap">
                     {formatResults()}
                   </pre>
+                </div>
+                {allResults.length > 0 && (
                   <div className="absolute top-2 right-2 flex gap-2">
                     <Button 
                       size="sm" 
@@ -252,7 +453,7 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
                       }}
                       aria-label="Copy results"
                     >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      {copied ? <CheckIcon className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
                     <Button 
                       size="sm" 
@@ -273,14 +474,13 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
                       </Button>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </BaseToolModal>
 
-      {/* Confirmation Dialog */}
       <Dialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
         <DialogContent>
           <DialogHeader>

@@ -33,10 +33,12 @@ import {
   Antenna,
   Calculator,
   Pointer,
-  Cctv
+  Cctv,
+  ArrowLeftRight
 } from "lucide-react"
 import { tools, getCategoryLabel } from "@/lib/tools"
 import { useEffect } from "react"
+import { Switch } from "@radix-ui/react-switch"
 
 interface ToolsSidebarProps {
   onSelectTool: (tool: string) => void
@@ -93,6 +95,8 @@ export function ToolsSidebar({ onSelectTool, activeTool }: ToolsSidebarProps) {
       Nikto: Server,
       "XSS Exploiter": Code,
       "SQL Map": Database,
+      "Decoder/Encoder": ArrowLeftRight,
+      "JWT Debugger": Braces,
       "CVSS Scoring": Calculator,
       "DNS Recon": Cctv,
     }

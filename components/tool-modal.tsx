@@ -20,6 +20,9 @@ import { SqlScanModal } from "./tools/sqlmap-modal"
 import { DnsReconModal } from "./tools/dnsrecon-modal"
 import { NucleiScanModal } from "./tools/nuclei-scan-modal"
 import { ParamEnumModal } from "./tools/param-enum-modal"
+import { SubdomainTakeoverModal } from "./tools/sudomain-takeover-modal"
+import { DecoderEncoderModal } from "./tools/decoder-encoder-modal"
+import { JwtDebuggerModal } from "./tools/jwt-debugger-modal"
 
 interface ToolModalProps {
   toolId: string | null
@@ -198,6 +201,27 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       return(
       <ParamEnumModal
       tool={selectedTool}
+      isOpen={internalIsOpen}
+      onClose={handleClose}
+      onSendToChat={onSendToChat}
+    />)
+    case "Subdomain Takeover":
+      return (
+        <SubdomainTakeoverModal tool={selectedTool}
+      isOpen={internalIsOpen}
+      onClose={handleClose}
+      onSendToChat={onSendToChat}
+    />)
+     case "Decoder/Encoder":
+      return (
+        <DecoderEncoderModal tool={selectedTool}
+      isOpen={internalIsOpen}
+      onClose={handleClose}
+      onSendToChat={onSendToChat}
+    />)
+     case "JWT Debugger":
+      return (
+        <JwtDebuggerModal tool={selectedTool}
       isOpen={internalIsOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
