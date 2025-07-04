@@ -118,7 +118,7 @@ export const tools: Tool[] = [
     name: "LFI Exploiter",
     description: "Exploit Local File Inclusion vulnerabilities.",
     category: "exploit",
-    status: "Under Development",
+    status: "Available",
   },
   {
     id: "20",
