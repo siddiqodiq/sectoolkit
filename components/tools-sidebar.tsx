@@ -34,7 +34,8 @@ import {
   Calculator,
   Pointer,
   Cctv,
-  ArrowLeftRight
+  ArrowLeftRight,
+  FolderTree
 } from "lucide-react"
 import { tools, getCategoryLabel } from "@/lib/tools"
 import { useEffect } from "react"
@@ -99,6 +100,8 @@ export function ToolsSidebar({ onSelectTool, activeTool }: ToolsSidebarProps) {
       "JWT Debugger": Braces,
       "CVSS Scoring": Calculator,
       "DNS Recon": Cctv,
+      "LFI Exploiter": FolderTree,
+      "Subdomain Takeover": Braces,
     }
 
     return iconMap[toolName] || Braces

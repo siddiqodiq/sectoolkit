@@ -1,179 +1,273 @@
-📄 .env
-📁 app/
-    📁 app/api/
-        📁 app/api/auth/
-            📁 app/api/auth/[...nextauth]/
-                📄 app/api/auth/[...nextauth]/route.ts
-            📁 app/api/auth/check-username/
-                📄 app/api/auth/check-username/route.ts
-            📁 app/api/auth/login/
-                📄 app/api/auth/login/route.ts
-            📁 app/api/auth/logout/
-                📄 app/api/auth/logout/route.ts
-            📁 app/api/auth/register/
-                📄 app/api/auth/register/route.ts
-            📁 app/api/auth/update-username/
-                📄 app/api/auth/update-username/route.ts
-        📁 app/api/chat/
-            📁 app/api/chat/gemini/
-            📁 app/api/chat/history/
-                📁 app/api/chat/history/[id]/
-                    📄 app/api/chat/history/[id]/route.ts
-                📄 app/api/chat/history/route.ts
-            📄 app/api/chat/route.ts
-        📁 app/api/tools/
-            📁 app/api/tools/cors-scanner/
-                📄 app/api/tools/cors-scanner/route.ts
-            📁 app/api/tools/deep-crawler/
-                📄 app/api/tools/deep-crawler/route.ts
-            📁 app/api/tools/dnsrecon/
-                📄 app/api/tools/dnsrecon/route.ts
-                📁 app/api/tools/dnsrecon/stop/
-                    📄 app/api/tools/dnsrecon/stop/route.ts
-            📁 app/api/tools/fuzz/
-                📄 app/api/tools/fuzz/route.ts
-                📁 app/api/tools/fuzz/stop/
-                    📄 app/api/tools/fuzz/stop/route.ts
-            📁 app/api/tools/nmap-scan/
-                📄 app/api/tools/nmap-scan/route.ts
-            📁 app/api/tools/nuclei-scan/
-                📄 app/api/tools/nuclei-scan/route.ts
-                📁 app/api/tools/nuclei-scan/stop/
-                    📄 app/api/tools/nuclei-scan/stop/route.ts
-            📁 app/api/tools/open-redirect/
-                📄 app/api/tools/open-redirect/route.ts
-            📁 app/api/tools/sqlscan/
-                📄 app/api/tools/sqlscan/route.ts
-                📁 app/api/tools/sqlscan/stop/
-                    📄 app/api/tools/sqlscan/stop/route.ts
-            📁 app/api/tools/subdomain/
-                📁 app/api/tools/subdomain/active-check/
-                    📄 app/api/tools/subdomain/active-check/route.ts
-                📁 app/api/tools/subdomain/enumeration/
-                    📄 app/api/tools/subdomain/enumeration/route.ts
-                📄 app/api/tools/subdomain/scanner.ts
-            📁 app/api/tools/url-crawler/
-                📄 app/api/tools/url-crawler/route.ts
-            📁 app/api/tools/utils/
-                📄 app/api/tools/utils/validators.ts
-            📁 app/api/tools/waf/
-                📄 app/api/tools/waf/detector.ts
-                📄 app/api/tools/waf/route.ts
-            📁 app/api/tools/wayback-dorking/
-                📄 app/api/tools/wayback-dorking/route.ts
-            📁 app/api/tools/whois-lookup/
-                📄 app/api/tools/whois-lookup/route.ts
-            📁 app/api/tools/xss-scan/
-                📄 app/api/tools/xss-scan/route.ts
-                📁 app/api/tools/xss-scan/stop/
-                    📄 app/api/tools/xss-scan/stop/route.ts
-    📁 app/dashboard/
-        📄 app/dashboard/layout.tsx
-        📄 app/dashboard/page.tsx
-    📁 app/database/
-        📄 app/database/database.css
-        📄 app/database/layout.tsx
-        📄 app/database/page.tsx
-    📄 app/globals.css
-    📄 app/landing.css
-    📄 app/layout.tsx
-    📁 app/login/
-        📄 app/login/layout.tsx
-        📄 app/login/page.tsx
-    📄 app/logo.ico
-    📄 app/page.tsx
-    📄 app/providers.tsx
-    📁 app/register/
-        📄 app/register/layout.tsx
-        📄 app/register/page.tsx
-    📄 app/types.ts
-📁 components/
-    📄 components/canvas-reveal-effect-demo.tsx
-    📄 components/chat-interface.tsx
-    📄 components/code-block.tsx
-    📁 components/database/
-        📄 components/database/cve-detail-dialog.tsx
-        📄 components/database/cve-table.tsx
-        📄 components/database/payload-table.tsx
-        📄 components/database/search-header.tsx
-        📄 components/database/text-file-preview.tsx
-        📄 components/database/wordlist-table.tsx
-    📄 components/hero-with-canvas-reveal.tsx
-    📄 components/logo-preview.tsx
-    📄 components/main-sidebar.tsx
-    📄 components/route-guard.tsx
-    📄 components/sidebar-event-listener.tsx
-    📄 components/theme-provider.tsx
-    📄 components/tool-modal.tsx
-    📁 components/tools/
-        📄 components/tools/base-tool-modal.tsx
-        📄 components/tools/cors-scanner-modal.tsx
-        📄 components/tools/cvss-calculator-modal.tsx
-        📄 components/tools/deep-crawler-modal.tsx
-        📄 components/tools/dnsrecon-modal.tsx
-        📄 components/tools/google-dork-modal.tsx
-        📄 components/tools/nmap-scan-modal.tsx
-        📄 components/tools/nuclai-scan-modal.tsx
-        📄 components/tools/open-redirect-modal.tsx
-        📄 components/tools/sqlmap-modal.tsx
-        📄 components/tools/subdomain-modal.tsx
-        📄 components/tools/url-crawler-modal.tsx
-        📄 components/tools/url-fuzzer-modal.tsx
-        📄 components/tools/waf-modal.tsx
-        📄 components/tools/wayback-dorking-modal.tsx
-        📄 components/tools/whois-lookup-modal.tsx
-        📄 components/tools/xss-scan-modal.tsx
-    📄 components/tools-sidebar.tsx
-    📁 components/ui/
-📄 components.json
-📄 docker-compose.postgres.yml
-📁 hooks/
-    📄 hooks/use-mobile.tsx
-    📄 hooks/use-toast.ts
-📁 lib/
-    📄 lib/auth.ts
-    📄 lib/code-file-extensions.ts
-    📄 lib/db.ts
-    📄 lib/prism.ts
-    📄 lib/security-resources.ts
-    📄 lib/sidebar-event.ts
-    📄 lib/tools.ts
-    📄 lib/utils.ts
-📄 middleware.ts
-📄 next-env.d.ts
-📄 next.config.mjs
-
-📄 package.json
-📄 pnpm-lock.yaml
-📄 postcss.config.mjs
-📁 prisma/
-    📁 prisma/migrations/
-        📁 prisma/migrations/20250518022309_init/
-            📄 prisma/migrations/20250518022309_init/migration.sql
-        📁 prisma/migrations/20250519044157_init/
-            📄 prisma/migrations/20250519044157_init/migration.sql
-        📁 prisma/migrations/20250519071321_fix_relation_cascade_delete/
-            📄 prisma/migrations/20250519071321_fix_relation_cascade_delete/migration.sql
-        📁 prisma/migrations/20250519131934_make_username_optional/
-            📄 prisma/migrations/20250519131934_make_username_optional/migration.sql
-        📁 prisma/migrations/20250519132440_make_username_not_optional/
-            📄 prisma/migrations/20250519132440_make_username_not_optional/migration.sql
-        📁 prisma/migrations/20250519132834_make_username_optional2/
-            📄 prisma/migrations/20250519132834_make_username_optional2/migration.sql
-        📄 prisma/migrations/migration_lock.toml
-    📄 prisma/schema.prisma
-📁 public/
-    📁 public/resources/
-        📁 public/resources/payloads/
-            📄 public/resources/payloads/5mb.txt
-            📄 public/resources/payloads/akamai.txt
-            📄 public/resources/payloads/cloudflare.txt
-            📄 public/resources/payloads/lfi.txt
-            📄 public/resources/payloads/xssajib.txt
-            📄 public/resources/payloads/xssirwn.txt
-        📁 public/resources/wordlists/
-📄 struktur.py
-📄 tailwind.config.ts
-📄 tsconfig.json
-📁 utils/
-    📄 utils/ansi.ts
+📁 history/
+    📁 history/[id]/
+        📄 history/[id]/route.ts:
+            // app/api/chat/history/[id]/route.ts
+            import { NextResponse } from 'next/server'
+            import { getServerSession } from 'next-auth'
+            import prisma from '@/lib/db'
+            import { authOptions } from '@/lib/auth'
+            
+            export async function GET(
+              request: Request,
+              context: { params: Promise<{ id: string }> }
+            ) {
+              const session = await getServerSession(authOptions);
+            
+              if (!session?.user?.email) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+              }
+            
+              try {
+                const { id } = await context.params;
+            
+                const chat = await prisma.chat.findUnique({
+                  where: {
+                    id,
+                    user: {
+                      email: session.user.email,
+                    },
+                  },
+                  include: {
+                    messages: {
+                      orderBy: { createdAt: 'asc' },
+                      select: {
+                        id: true,
+                        content: true,
+                        role: true,
+                        createdAt: true,
+                      },
+                    },
+                  },
+                });
+            
+                if (!chat) {
+                  return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+                }
+            
+                return NextResponse.json(chat);
+              } catch (error) {
+                console.error('Error fetching chat:', error);
+                return NextResponse.json(
+                  { error: 'Internal server error' },
+                  { status: 500 }
+                );
+              }
+            }
+    📄 history/route.ts:
+        // app/api/chat/history/route.ts
+        import { NextResponse } from 'next/server'
+        import { getServerSession } from 'next-auth'
+        import prisma from '@/lib/db'
+        import { authOptions } from '@/lib/auth'
+        
+        // Extend the Session type to include user.id
+        declare module "next-auth" {
+          interface Session {
+            user: {
+              id: string
+              email: string
+              name?: string
+              username?: string
+            }
+          }
+        }
+        
+        export async function GET() {
+          const session = await getServerSession(authOptions)
+          
+          if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+          }
+        
+          try {
+            const chats = await prisma.chat.findMany({
+              where: { userId: session.user.id },
+              orderBy: { createdAt: 'desc' },
+              include: {
+                messages: {
+                  orderBy: { createdAt: 'asc' },
+                  take: 1 // Ambil pesan pertama untuk preview
+                }
+              }
+            })
+        
+            return NextResponse.json(chats)
+          } catch (error) {
+            return NextResponse.json(
+              { error: 'Internal server error' },
+              { status: 500 }
+            )
+          }
+        }
+        
+        export async function POST(req: Request) {
+          const session = await getServerSession(authOptions)
+          
+          if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+          }
+        
+          try {
+            const newChat = await prisma.chat.create({
+              data: {
+                userId: session.user.id,
+                title: 'New Chat',
+                modelUsed: process.env.OLLAMA_MODEL || 'pentest-ai',
+                messages: {
+                  create: {
+                    role: 'SYSTEM',
+                    content: 'Chat session started'
+                  }
+                }
+              }
+            })
+        
+            return NextResponse.json(newChat)
+          } catch (error) {
+            return NextResponse.json(
+              { error: 'Internal server error' },
+              { status: 500 }
+            )
+          }
+        }
+        
+        // app/api/chat/history/route.ts
+        export async function DELETE(req: Request) {
+          const session = await getServerSession(authOptions)
+          const { searchParams } = new URL(req.url)
+          const chatId = searchParams.get('id')
+          
+          if (!session?.user?.id || !chatId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+          }
+        
+          try {
+            // Mulai transaction
+            const deleteOperations = await prisma.$transaction([
+              // Pertama hapus semua messages yang terkait dengan chat ini
+              prisma.message.deleteMany({
+                where: { 
+                  chatId: chatId
+                }
+              }),
+              // Kemudian hapus chat-nya
+              prisma.chat.delete({
+                where: { 
+                  id: chatId,
+                  userId: session.user.id 
+                }
+              })
+            ])
+        
+            return NextResponse.json({ success: true })
+          } catch (error) {
+            console.error('Error deleting chat:', error)
+            return NextResponse.json(
+              { error: 'Internal server error' },
+              { status: 500 }
+            )
+          }
+        }📄 route.ts:
+    // app/api/chat/route.ts
+    import { NextResponse } from 'next/server'
+    import { getServerSession } from 'next-auth'
+    import prisma from '@/lib/db'
+    import { authOptions } from '@/lib/auth'
+    import { ollama, createOllama } from 'ollama-ai-provider'
+    import { streamText } from 'ai'
+    
+    export async function POST(req: Request) {
+      const session = await getServerSession(authOptions)
+      const { messages, chatId } = await req.json()
+    
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    
+      // Pastikan chatId valid
+      let chat = null
+      if (chatId) {
+        chat = await prisma.chat.findUnique({
+          where: {
+            id: chatId,
+            userId: session.user.id
+          }
+        })
+      }
+    
+      // Jika tidak ada chatId atau chat tidak ditemukan, buat baru
+      if (!chat) {
+        chat = await prisma.chat.create({
+          data: {
+            userId: session.user.id,
+            title: messages.find((m: { role: string }) => m.role === 'user')?.content.substring(0, 50) || 'New Chat',
+            modelUsed: process.env.OLLAMA_MODEL || 'pentest-ai'
+          }
+        })
+      }
+    
+      // Simpan pesan user ke database
+      const userMessage = messages[messages.length - 1]
+      if (userMessage.role === 'user') {
+        await prisma.message.create({
+          data: {
+            chatId: chat.id,
+            content: userMessage.content,
+            role: 'USER'
+          }
+        })
+      }
+    
+      const model = ollama(process.env.OLLAMA_MODEL || 'pentest-ai')
+    
+      try {
+        const { textStream } = await streamText({
+          model,
+          messages,
+        })
+    
+        let fullResponse = ''
+        const readableStream = new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder()
+            for await (const chunk of textStream) {
+              fullResponse += chunk
+              controller.enqueue(encoder.encode(chunk))
+            }
+    
+            // Simpan response AI ke database setelah stream selesai
+            await prisma.message.create({
+              data: {
+                chatId: chat.id,
+                content: fullResponse,
+                role: 'ASSISTANT'
+              }
+            })
+    
+            // Update judul chat jika ini adalah pesan pertama
+            if (messages.length <= 2) { // System message + 1 user message
+              await prisma.chat.update({
+                where: { id: chat.id },
+                data: {
+                  title: userMessage.content.substring(0, 50)
+                }
+              })
+            }
+    
+            controller.close()
+          }
+        })
+    
+        return new Response(readableStream, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+          },
+        })
+      } catch (error) {
+        console.error('Error:', error)
+        return NextResponse.json(
+          { error: 'Internal Server Error' },
+          { status: 500 }
+        )
+      }
+    }
