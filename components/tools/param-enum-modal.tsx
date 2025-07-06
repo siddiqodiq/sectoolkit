@@ -41,7 +41,8 @@ const PATTERN_OPTIONS = [
   { value: 'rce', label: 'RCE' },
   { value: 'sqli', label: 'SQL Injection' },
   { value: 'lfi', label: 'Local File Inclusion' },
-  { value: 'img-traversal', label: 'Image Traversal' }
+  { value: 'img-traversal', label: 'Image Traversal' },
+  { value: 'redirect', label: 'Open Redirect' }  // Tambahkan ini
 ];
 
 export function ParamEnumModal({ tool, isOpen, onClose, onSendToChat }: ParamEnumModalProps) {
