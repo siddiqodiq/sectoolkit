@@ -8,6 +8,8 @@ export async function POST(req: Request) {
     const mode = formData.get('mode') as string;
     const url = formData.get('url') as string | null;
     const file = formData.get('file') as File | null;
+    const cookie = formData.get('cookie') as string | null;
+    const cookie_file = formData.get('cookie_file') as File | null;
     const filter = formData.get('filter') as string | null;
     const success_criteria = formData.get('success_criteria') as string | null;
     const payload_file = formData.get('payload_file') as File | null;
@@ -27,6 +29,14 @@ export async function POST(req: Request) {
       flaskFormData.append('url', url);
     } else if (file) {
       flaskFormData.append('file', file);
+    }
+
+    if (cookie) {
+      flaskFormData.append('cookie', cookie);
+    }
+
+    if (cookie_file) {
+      flaskFormData.append('cookie_file', cookie_file);
     }
 
     if (mode === 'advanced') {

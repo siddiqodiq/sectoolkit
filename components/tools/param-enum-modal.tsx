@@ -42,7 +42,8 @@ const PATTERN_OPTIONS = [
   { value: 'sqli', label: 'SQL Injection' },
   { value: 'lfi', label: 'Local File Inclusion' },
   { value: 'img-traversal', label: 'Image Traversal' },
-  { value: 'redirect', label: 'Open Redirect' }  // Tambahkan ini
+  { value: 'redirect', label: 'Open Redirect' },
+   { value: 'xss', label: 'Cross-Site Scripting (XSS)' }  // Tambahkan ini
 ];
 
 export function ParamEnumModal({ tool, isOpen, onClose, onSendToChat }: ParamEnumModalProps) {

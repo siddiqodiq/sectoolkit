@@ -39,13 +39,16 @@ interface LfiScanModalProps {
 }
 
 export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [targetUrl, setTargetUrl] = useState("");
   const [targetFile, setTargetFile] = useState<File | null>(null);
   const [payloadFile, setPayloadFile] = useState<File | null>(null);
   const [scanMode, setScanMode] = useState("basic");
+  const [cookieInput, setCookieInput] = useState("");
+  const [cookieFile, setCookieFile] = useState<File | null>(null);
+  const [cookieMethod, setCookieMethod] = useState<"none" | "direct" | "file">("none");
   const [advancedOptions, setAdvancedOptions] = useState({
     filter: false,
     successCriteria: "",
@@ -104,6 +107,16 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
       return;
     }
 
+    if (cookieMethod === "direct" && !cookieInput) {
+      setError("Cookie is required when using direct cookie input");
+      return;
+    }
+
+    if (cookieMethod === "file" && !cookieFile) {
+      setError("Cookie file is required when using cookie file");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setResults([]);
@@ -112,11 +125,16 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
     try {
       const formData = new FormData();
       formData.append('mode', scanMode);
-      
       if (targetUrl) {
         formData.append('url', targetUrl);
       } else if (targetFile) {
         formData.append('file', targetFile);
+      }
+
+      if (cookieMethod === "direct") {
+        formData.append('cookie', cookieInput);
+      } else if (cookieMethod === "file" && cookieFile) {
+        formData.append('cookie_file', cookieFile);
       }
 
       if (scanMode === 'advanced') {
@@ -296,7 +314,7 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
     }
   };
 
-  return (
+   return (
     <>
       <BaseToolModal tool={tool} isOpen={isOpen} onClose={handleCloseAttempt}>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -361,6 +379,57 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
                         </div>
                       </TabsContent>
                     </Tabs>
+
+                    <div className="space-y-2">
+                      <Label>Cookie Options</Label>
+                      <Select 
+                        value={cookieMethod} 
+                        onValueChange={(value) => setCookieMethod(value as "none" | "direct" | "file")}
+                        disabled={isLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select cookie method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Cookie</SelectItem>
+                          <SelectItem value="direct">Direct Cookie Input</SelectItem>
+                          <SelectItem value="file">Cookie File</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {cookieMethod === "direct" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="cookieInput">Cookie</Label>
+                        <Input
+                          id="cookieInput"
+                          type="text"
+                          placeholder="PHPSESSID=abc123; auth_token=xyz456"
+                          value={cookieInput}
+                          onChange={(e) => setCookieInput(e.target.value)}
+                          disabled={isLoading}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Enter cookies in format: name=value; name2=value2
+                        </p>
+                      </div>
+                    )}
+
+                    {cookieMethod === "file" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="cookieFile">Cookie File</Label>
+                        <Input
+                          id="cookieFile"
+                          type="file"
+                          accept=".txt,.text"
+                          onChange={(e) => setCookieFile(e.target.files?.[0] || null)}
+                          disabled={isLoading}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Text file containing cookies (one per line or in format: name=value)
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
@@ -405,6 +474,57 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
                         </div>
                       </TabsContent>
                     </Tabs>
+
+                    <div className="space-y-2">
+                      <Label>Cookie Options</Label>
+                      <Select 
+                        value={cookieMethod} 
+                        onValueChange={setCookieMethod}
+                        disabled={isLoading}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select cookie method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Cookie</SelectItem>
+                          <SelectItem value="direct">Direct Cookie Input</SelectItem>
+                          <SelectItem value="file">Cookie File</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {cookieMethod === "direct" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="cookieInputAdvanced">Cookie</Label>
+                        <Input
+                          id="cookieInputAdvanced"
+                          type="text"
+                          placeholder="PHPSESSID=abc123; auth_token=xyz456"
+                          value={cookieInput}
+                          onChange={(e) => setCookieInput(e.target.value)}
+                          disabled={isLoading}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Enter cookies in format: name=value; name2=value2
+                        </p>
+                      </div>
+                    )}
+
+                    {cookieMethod === "file" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="cookieFileAdvanced">Cookie File</Label>
+                        <Input
+                          id="cookieFileAdvanced"
+                          type="file"
+                          accept=".txt,.text"
+                          onChange={(e) => setCookieFile(e.target.files?.[0] || null)}
+                          disabled={isLoading}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Text file containing cookies (one per line or in format: name=value)
+                        </p>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="payloadFile">Custom Payload File (Optional)</Label>
@@ -467,6 +587,7 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
                 <AlertDescription className="text-xs">
                   <p>• Basic mode: Simple LFI detection with default payloads</p>
                   <p>• Advanced mode: Custom payloads, filtering, and success criteria</p>
+                  <p>• Cookie support for authenticated scanning</p>
                   <p>• Example vulnerable URL: http://testphp.vulnweb.com/showimage.php?file=</p>
                 </AlertDescription>
               </Alert>
@@ -474,7 +595,9 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
             <CardFooter className="flex gap-2">
               <Button
                 onClick={handleRunTool}
-                disabled={isLoading || (!targetUrl && !targetFile)}
+                disabled={isLoading || (!targetUrl && !targetFile) || 
+                  (cookieMethod === "direct" && !cookieInput) ||
+                  (cookieMethod === "file" && !cookieFile)}
                 className="flex-1"
               >
                 {isLoading ? (
