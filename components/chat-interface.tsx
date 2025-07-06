@@ -202,78 +202,79 @@ function hashCode(str: string): number {
   }, [messages, isAtBottom, scrollToBottom])
 
   
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || streamingRef.current) return
+  // Di dalam komponen ChatInterface
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (!input.trim() || streamingRef.current) return
 
-    setIsLoading(true)
-    streamingRef.current = true
-    
-    const userMessage: Message = {
-      role: "user",
-      content: input,
-      id: Date.now().toString()
-    }
-    
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    setInput("")
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          messages: newMessages,
-          chatId: currentChatId
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error("No reader available")
-
-      let fullContent = ""
-      const assistantMessageId = `assistant-${Date.now()}`
-      
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "", 
-        id: assistantMessageId 
-      }])
-
-      const decoder = new TextDecoder()
-      
-      while (streamingRef.current) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        fullContent += chunk
-        
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: fullContent } 
-            : msg
-        ))
-      }
-    } catch (error) {
-      console.error("Error:", error)
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
-        id: `error-${Date.now()}`
-      }])
-    } finally {
-      streamingRef.current = false
-      setIsLoading(false)
-    }
+  setIsLoading(true)
+  streamingRef.current = true
+  
+  const userMessage: Message = {
+    role: "user",
+    content: input,
+    id: Date.now().toString()
   }
+  
+  const newMessages = [...messages, userMessage]
+  setMessages(newMessages)
+  setInput("")
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        messages: [userMessage], // Hanya kirim pesan terakhir
+        chatId: currentChatId
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) throw new Error("No reader available")
+
+    let fullContent = ""
+    const assistantMessageId = `assistant-${Date.now()}`
+    
+    setMessages(prev => [...prev, { 
+      role: "assistant", 
+      content: "", 
+      id: assistantMessageId 
+    }])
+
+    const decoder = new TextDecoder()
+    
+    while (streamingRef.current) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value, { stream: true })
+      fullContent += chunk
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { ...msg, content: fullContent } 
+          : msg
+      ))
+    }
+  } catch (error) {
+    console.error("Error:", error)
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      content: "Sorry, I encountered an error. Please try again.",
+      id: `error-${Date.now()}`
+    }])
+  } finally {
+    streamingRef.current = false
+    setIsLoading(false)
+  }
+}
 
 
   const handleSendToolResults = async (content: string) => {
