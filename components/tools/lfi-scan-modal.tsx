@@ -479,7 +479,7 @@ export function LfiScanModal({ tool, isOpen, onClose, onSendToChat }: LfiScanMod
                       <Label>Cookie Options</Label>
                       <Select 
                         value={cookieMethod} 
-                        onValueChange={setCookieMethod}
+                        onValueChange={(value) => setCookieMethod(value as "none" | "direct" | "file")}
                         disabled={isLoading}
                       >
                         <SelectTrigger>

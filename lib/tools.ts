@@ -63,7 +63,13 @@ export const tools: Tool[] = [
     category: "recon",
     status: "Available",
   },
- 
+ {
+  id:"24",
+  name: "Security Headers Checker",
+  description: "Check security headers of a website.",
+  category: "exploit",
+  status: "Available",
+ },
   {
     id: "5",
     name: "URL Fuzzer",

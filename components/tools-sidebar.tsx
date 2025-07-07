@@ -35,7 +35,8 @@ import {
   Pointer,
   Cctv,
   ArrowLeftRight,
-  FolderTree
+  FolderTree,
+  Heading
 } from "lucide-react"
 import { tools, getCategoryLabel } from "@/lib/tools"
 import { useEffect } from "react"
@@ -102,6 +103,7 @@ export function ToolsSidebar({ onSelectTool, activeTool }: ToolsSidebarProps) {
       "DNS Recon": Cctv,
       "LFI Exploiter": FolderTree,
       "Subdomain Takeover": Braces,
+      "Security Headers Checker": Heading,
     }
 
     return iconMap[toolName] || Braces

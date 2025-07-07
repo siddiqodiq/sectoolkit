@@ -24,6 +24,7 @@ import { SubdomainTakeoverModal } from "./tools/sudomain-takeover-modal"
 import { DecoderEncoderModal } from "./tools/decoder-encoder-modal"
 import { JwtDebuggerModal } from "./tools/jwt-debugger-modal"
 import { LfiScanModal } from "./tools/lfi-scan-modal"
+import { SecurityHeadersModal } from "./tools/security-headers-modal"
 
 interface ToolModalProps {
   toolId: string | null
@@ -230,6 +231,13 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
     case "LFI Exploiter":
       return (
         <LfiScanModal tool={selectedTool}
+      isOpen={internalIsOpen}
+      onClose={handleClose}
+      onSendToChat={onSendToChat}
+    />)
+     case "Security Headers Checker":
+      return (
+        <SecurityHeadersModal tool={selectedTool}
       isOpen={internalIsOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
