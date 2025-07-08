@@ -180,9 +180,62 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
     }
   };
 
+  // Add URL validation function
+  const validateUrl = (url: string): { isValid: boolean; error?: string } => {
+    if (!url.trim()) {
+      return { isValid: false, error: "URL is required" };
+    }
+
+    // Remove any extra whitespace
+    const cleanUrl = url.trim();
+
+    // Check if URL starts with http:// or https://
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      return { isValid: false, error: "URL must start with http:// or https://" };
+    }
+
+    try {
+      const urlObj = new URL(cleanUrl);
+      
+      // Check if hostname is valid
+      if (!urlObj.hostname || urlObj.hostname.length === 0) {
+        return { isValid: false, error: "Invalid hostname in URL" };
+      }
+
+      // Check for valid domain format
+      const domainPattern = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      if (!domainPattern.test(urlObj.hostname)) {
+        return { isValid: false, error: "Invalid domain format" };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      return { isValid: false, error: "Invalid URL format" };
+    }
+  };
+
+  // Add real-time URL validation
+  const [urlValidation, setUrlValidation] = useState<{ isValid: boolean; error?: string }>({ isValid: true });
+
+  useEffect(() => {
+    if (targetUrl) {
+      const validation = validateUrl(targetUrl);
+      setUrlValidation(validation);
+      
+      // Clear any existing errors if URL becomes valid
+      if (validation.isValid && error?.includes("URL")) {
+        setError(null);
+      }
+    } else {
+      setUrlValidation({ isValid: true });
+    }
+  }, [targetUrl, error]);
+
   const handleRunTool = async () => {
-    if (!targetUrl) {
-      setError("URL is required");
+    // Validate URL before proceeding
+    const validation = validateUrl(targetUrl);
+    if (!validation.isValid) {
+      setError(validation.error || "Invalid URL");
       return;
     }
 
@@ -201,12 +254,24 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
       const response = await fetch('/api/tools/check-headers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: targetUrl }),
+        body: JSON.stringify({ url: targetUrl.trim() }),
         signal: abortControllerRef.current.signal,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // Handle specific error cases
+        if (errorText.includes("unknown url type") || errorText.includes("ValueError")) {
+          throw new Error("Invalid URL format. Please check the URL and try again.");
+        } else if (errorText.includes("Name or service not known") || errorText.includes("getaddrinfo failed")) {
+          throw new Error("Cannot resolve domain. Please check if the domain exists.");
+        } else if (errorText.includes("Connection refused") || errorText.includes("timeout")) {
+          throw new Error("Cannot connect to the target server. Server may be down or unreachable.");
+        } else if (errorText.includes("SSL") || errorText.includes("certificate")) {
+          throw new Error("SSL/TLS connection error. The server's certificate may be invalid.");
+        }
+        
         throw new Error(errorText || 'Failed to check security headers');
       }
 
@@ -222,6 +287,12 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
         // Handle JSON response
         const data = await response.json();
         setLastActivity(new Date());
+        
+        // Check for error in response data
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
         parseSecurityResults(data);
         setStatus("Security headers check completed");
       } else {
@@ -240,6 +311,11 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
           const chunk = decoder.decode(value, { stream: true });
           buffer += chunk;
           setLastActivity(new Date());
+
+          // Check for errors in streaming data
+          if (buffer.includes("Traceback") || buffer.includes("ValueError") || buffer.includes("unknown url type")) {
+            throw new Error("Invalid URL format. Please ensure the URL is correct and includes http:// or https://");
+          }
 
           // Process complete SSE messages or JSON objects
           if (buffer.includes('\n\n')) {
@@ -270,6 +346,9 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
                   // If it's not SSE format, try to parse as direct JSON
                   try {
                     const data = JSON.parse(message);
+                    if (data.error) {
+                      throw new Error(data.error);
+                    }
                     parseSecurityResults(data);
                     setStatus("Security headers check completed");
                   } catch (jsonError) {
@@ -285,6 +364,9 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
             // Try to parse accumulated text as JSON
             try {
               const data = JSON.parse(buffer);
+              if (data.error) {
+                throw new Error(data.error);
+              }
               parseSecurityResults(data);
               setStatus("Security headers check completed");
               break;
@@ -299,6 +381,9 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
         if (buffer.trim()) {
           try {
             const data = JSON.parse(buffer);
+            if (data.error) {
+              throw new Error(data.error);
+            }
             parseSecurityResults(data);
           } catch (jsonError) {
             accumulatedText += buffer;
@@ -458,8 +543,6 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
                   {error}
                 </div>
               )}
-
-
               <div className="space-y-2">
                 <Label htmlFor="targetUrl">Target URL</Label>
                 <Input
@@ -469,25 +552,33 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
                   value={targetUrl}
                   onChange={(e) => setTargetUrl(e.target.value)}
                   disabled={isLoading}
+                  className={!urlValidation.isValid && targetUrl ? "border-red-500 focus:border-red-500" : ""}
                 />
+                {!urlValidation.isValid && targetUrl && (
+                  <p className="text-xs text-red-400 flex items-center">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    {urlValidation.error}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  Enter the URL to check for security headers
+                  Enter the complete URL including http:// or https://
                 </p>
               </div>
 
               <Alert className="bg-gray-800/50 border-gray-700">
                 <Shield className="h-4 w-4" />
                 <AlertDescription className="text-xs">
-                  <p>• Checks for common security headers like CSP, HSTS, X-Frame-Options</p>
-                  <p>• Identifies missing security headers that could expose vulnerabilities</p>
-                  <p>• Example: https://example.com</p>
+                  <div className="space-y-1">
+                    <p>• Checks for common security headers like CSP, HSTS, X-Frame-Options</p>
+                    <p>• Identifies missing security headers that could expose vulnerabilities</p>
+                  </div>
                 </AlertDescription>
               </Alert>
             </CardContent>
             <CardFooter className="flex gap-2">
               <Button
                 onClick={handleRunTool}
-                disabled={isLoading || !targetUrl}
+                disabled={isLoading || !targetUrl || !urlValidation.isValid}
                 className="flex-1"
               >
                 {isConnecting ? (
@@ -520,9 +611,7 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
             </CardFooter>
           </Card>
 
-    
-
-          {/* Results section */}
+          {/* Results section with improved error handling */}
           {(results.length > 0 || isLoading) && (
             <Card>
               <CardHeader>
