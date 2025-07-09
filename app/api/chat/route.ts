@@ -13,6 +13,7 @@ import { ollama} from 'ollama-ai-provider'
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   const { messages, chatId } = await req.json()
+  
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

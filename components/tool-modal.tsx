@@ -37,6 +37,8 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   const selectedTool = tools.find((tool) => tool.id === toolId)
 
+  
+
   // Sync internal state with props
   useEffect(() => {
     if (isOpen) {

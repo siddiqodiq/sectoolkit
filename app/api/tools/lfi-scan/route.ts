@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       if (payload_file) flaskFormData.append('payload_file', payload_file);
     }
 
-    const flaskResponse = await fetch('http://localhost:5000/api/lfi-scan', {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/lfi-scan`, {
       method: 'POST',
       body: flaskFormData,
       signal: req.signal || undefined,

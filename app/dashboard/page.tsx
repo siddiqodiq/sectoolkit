@@ -17,6 +17,18 @@ export default function Home() {
   const pathname = usePathname()
   const router = useRouter()
   const chatId = searchParams.get('chat')
+  const toolFromUrl = searchParams.get('tool')
+
+  // Handle tool selection from URL parameter
+  useEffect(() => {
+    if (toolFromUrl) {
+      setActiveTool(toolFromUrl)
+      // Clean up URL parameter after setting the tool
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('tool')
+      router.replace(newUrl.pathname + newUrl.search, { scroll: false })
+    }
+  }, [toolFromUrl, router])
 
   const handleToolSelect = (toolId: string) => {
     if (toolId === activeTool) {

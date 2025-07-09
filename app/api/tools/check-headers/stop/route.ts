@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const { session_id } = await req.json();
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
     console.log(`Stopping security headers check with session_id: ${session_id}`);
 
-    const response = await fetch('http://localhost:5000/api/check-headers/stop', {
+    const response = await fetch(`${kaliToolsUrl}/api/check-headers/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id }),

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
+const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
     const { url } = await req.json();
@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return new Response('URL is required', { status: 400 });
     }
 
-    const response = await fetch('http://localhost:5000/api/check-headers', {
+    const response = await fetch(`${kaliToolsUrl}/api/check-headers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),

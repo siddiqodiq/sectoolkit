@@ -283,17 +283,17 @@ const handleSubmit = async (e: React.FormEvent) => {
     // Create a new user message with the tool results
     const toolMessage: Message = {
       role: "user",
-      content: `Here are the results from the tool, please analyze what is the next step to do for exploit or attack the target:\n\n${content}`,
+      content: `Here are the results from the penetration testing tool. Please analyze these results and provide insights on potential vulnerabilities and next steps:\n\n${content}`,
       id: `tool-${Date.now()}`
     };
-  
+
     // Add the tool message to chat
     setMessages(prev => [...prev, toolMessage]);
     
     // Process the tool results through the LLM
     setIsLoading(true);
     streamingRef.current = true;
-  
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -301,24 +301,18 @@ const handleSubmit = async (e: React.FormEvent) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ 
-          messages: [
-            ...messages,
-            {
-              role: "system",
-              content: "You are a pentesting assistant. Analyze these tool results and provide insights."
-            },
-            toolMessage
-          ] 
+          messages: [toolMessage],
+          chatId: currentChatId
         })
       });
-  
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
+
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
-  
+
       let fullContent = "";
       const assistantMessageId = `assistant-${Date.now()}`;
       
@@ -327,13 +321,13 @@ const handleSubmit = async (e: React.FormEvent) => {
         content: "", 
         id: assistantMessageId 
       }]);
-  
+
       const decoder = new TextDecoder();
       
       while (streamingRef.current) {
         const { done, value } = await reader.read();
         if (done) break;
-  
+
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
         
@@ -343,11 +337,17 @@ const handleSubmit = async (e: React.FormEvent) => {
             : msg
         ));
       }
+
+      // Save the conversation to database
+      toast({
+        title: "Tool results sent",
+        description: "AI is analyzing the results...",
+      });
     } catch (error) {
       console.error("Error:", error);
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: "Sorry, I encountered an error processing the tool results.",
+        content: "Sorry, I encountered an error processing the tool results. Please try again.",
         id: `error-${Date.now()}`
       }]);
       toast({
