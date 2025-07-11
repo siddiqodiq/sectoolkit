@@ -89,7 +89,7 @@ export function MainSidebar() {
   const menuItems = [
     { 
       id: "dashboard", 
-      label: "Dashboard", 
+      label: "Dashboard AI", 
       icon: Shield,
       path: "/dashboard",
       onClick: () => router.push("/dashboard")

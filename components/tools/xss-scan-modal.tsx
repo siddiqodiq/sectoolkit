@@ -53,6 +53,7 @@ export function XssScanModal({ tool, isOpen, onClose, onSendToChat }: XssScanMod
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
   const resultsEndRef = useRef<HTMLDivElement>(null);
+  const [cookie, setCookie] = useState("");
 
   useEffect(() => {
     if (resultsEndRef.current) {
@@ -94,47 +95,56 @@ export function XssScanModal({ tool, isOpen, onClose, onSendToChat }: XssScanMod
     return <div>{cleanLine.trim()}</div>;
   };
 
-   const handleRunTool = async () => {
-    if (['1', '2', '3'].includes(scanMode) && !targetUrl) {
-      setError("Target URL is required for this mode");
-      return;
+
+
+// Update the handleRunTool function to include cookie in formData
+const handleRunTool = async () => {
+  if (['1', '2', '3'].includes(scanMode) && !targetUrl) {
+    setError("Target URL is required for this mode");
+    return;
+  }
+
+  if (['4', '5', '6'].includes(scanMode) && !targetFile) {
+    setError("Target file is required for this mode");
+    return;
+  }
+
+  if (['3', '6'].includes(scanMode) && !customPayloadFile) {
+    setError("Custom payload file is required for this mode");
+    return;
+  }
+
+  setIsLoading(true);
+  setError(null);
+  setResults([]);
+  setScanCompleted(false);
+  abortControllerRef.current = new AbortController();
+
+  try {
+    const formData = new FormData();
+    formData.append('mode', scanMode);
+    
+    if (['1', '2', '3'].includes(scanMode)) {
+      formData.append('target_url', targetUrl);
+    } else if (targetFile) {
+      formData.append('target_file', targetFile);
     }
 
-    if (['4', '5', '6'].includes(scanMode) && !targetFile) {
-      setError("Target file is required for this mode");
-      return;
+    if (['3', '6'].includes(scanMode) && customPayloadFile) {
+      formData.append('custom_payload', customPayloadFile);
     }
 
-    if (['3', '6'].includes(scanMode) && !customPayloadFile) {
-      setError("Custom payload file is required for this mode");
-      return;
+    // Add cookie to formData if provided
+    if (cookie) {
+      formData.append('cookie', cookie);
     }
 
-    setIsLoading(true);
-    setError(null);
-    setResults([]);
-    setScanCompleted(false);
-    abortControllerRef.current = new AbortController();
+    const response = await fetch('/api/tools/xss-scan', {
+      method: 'POST',
+      body: formData,
+      signal: abortControllerRef.current.signal,
+    });
 
-    try {
-      const formData = new FormData();
-      formData.append('mode', scanMode);
-      
-      if (['1', '2', '3'].includes(scanMode)) {
-        formData.append('target_url', targetUrl);
-      } else if (targetFile) {
-        formData.append('target_file', targetFile);
-      }
-
-      if (['3', '6'].includes(scanMode) && customPayloadFile) {
-        formData.append('custom_payload', customPayloadFile);
-      }
-
-      const response = await fetch('/api/tools/xss-scan', {
-        method: 'POST',
-        body: formData,
-        signal: abortControllerRef.current.signal,
-      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -367,6 +377,21 @@ export function XssScanModal({ tool, isOpen, onClose, onSendToChat }: XssScanMod
                         </SelectContent>
                       </Select>
                     </div>
+                     <div className="space-y-2">
+                    <Label htmlFor="cookie">Cookie (Optional)</Label>
+                    <Input
+                      id="cookie"
+                      type="text"
+                      placeholder="session=abc123; token=xyz456"
+                      value={cookie}
+                      onChange={(e) => setCookie(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Add cookies if authentication is required (format: key=value; key2=value2)
+                    </p>
+                  </div>
+                   
 
                     {scanMode === '3' && (
                       <div className="space-y-2">
@@ -439,6 +464,20 @@ export function XssScanModal({ tool, isOpen, onClose, onSendToChat }: XssScanMod
                         </p>
                       </div>
                     )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cookie">Cookie (Optional)</Label>
+                    <Input
+                      id="cookie"
+                      type="text"
+                      placeholder="session=abc123; token=xyz456"
+                      value={cookie}
+                      onChange={(e) => setCookie(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Add cookies if authentication is required (format: key=value; key2=value2)
+                    </p>
                   </div>
                 </TabsContent>
               </Tabs>

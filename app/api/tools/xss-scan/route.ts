@@ -1,4 +1,3 @@
-// app/api/tools/xss-scan/route.ts
 import { NextResponse } from 'next/server';
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export const dynamic = 'force-dynamic';
@@ -10,12 +9,13 @@ export async function POST(req: Request) {
     const targetUrl = formData.get('target_url') as string | null;
     const targetFile = formData.get('target_file') as File | null;
     const customPayload = formData.get('custom_payload') as File | null;
+    const cookie = formData.get('cookie') as string | null; // Add cookie field
 
     if (!mode) {
       return new Response('Scan mode is required', { status: 400 });
     }
 
-    // Validasi mode dan input yang diperlukan
+    // Validate mode and required inputs
     if (['1', '2', '3'].includes(mode) && !targetUrl) {
       return new Response('Target URL is required for this mode', { status: 400 });
     }
@@ -28,13 +28,14 @@ export async function POST(req: Request) {
       return new Response('Custom payload file is required for this mode', { status: 400 });
     }
 
-    // Forward ke Flask backend
+    // Forward to Flask backend
     const flaskFormData = new FormData();
     flaskFormData.append('mode', mode);
     
     if (targetUrl) flaskFormData.append('target_url', targetUrl);
     if (targetFile) flaskFormData.append('target_file', targetFile);
     if (customPayload) flaskFormData.append('custom_payload', customPayload);
+    if (cookie) flaskFormData.append('cookie', cookie); // Add cookie to form data
 
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/xss-scan`, {
       method: 'POST',
