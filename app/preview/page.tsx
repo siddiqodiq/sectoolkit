@@ -6,6 +6,7 @@ import { WhoisLookupModal } from "@/components/tools/whois-lookup-modal"
 import { GoogleDorkModal } from "@/components/tools/google-dork-modal"
 import { CvssCalculatorModal } from "@/components/tools/cvss-calculator-modal"
 import { DecoderEncoderModal } from "@/components/tools/decoder-encoder-modal"
+import { SubdomainModal } from "@/components/tools/subdomain-modal"
 
 const dummyTool: Tool = {
   id: "nuclei-scan",
@@ -49,7 +50,7 @@ export default function NucleiPreviewPage() {
   return (
     <div className="min-h-screen w-full bg-orange-600 text-white p-4">
       <h1 className="text-2xl font-bold mb-4">Nuclei Modal Preview</h1>
-      <DecoderEncoderModal
+      <SubdomainModal
         tool={dummyTool}
         isOpen={open}
         onClose={() => setOpen(false)}

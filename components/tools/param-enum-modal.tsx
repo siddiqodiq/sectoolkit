@@ -371,15 +371,6 @@ export function ParamEnumModal({ tool, isOpen, onClose, onSendToChat }: ParamEnu
                 </p>
               </div>
 
-              <Alert className="bg-gray-800/50 border-gray-700">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  <p>• Uses waybackurls and gau to find historical URLs</p>
-                  <p>• Applies gf patterns to filter interesting parameters</p>
-                  <p>• Processes results through qsreplace</p>
-                  <p>• Example patterns: IDOR, RCE, SQLi, LFI, img-traversal</p>
-                </AlertDescription>
-              </Alert>
             </CardContent>
             <CardFooter className="flex gap-2">
               <Button
