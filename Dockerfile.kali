@@ -31,6 +31,9 @@ RUN apt install -y \
     python3-requests \
     python3-gevent \
     python3-eventlet \
+    cmake \
+    make \
+    build-essential \
     && apt clean
 
 # Instalasi tools Go
@@ -43,11 +46,23 @@ RUN go install github.com/tomnomnom/assetfinder@latest && \
     go install github.com/tomnomnom/gf@latest && \
     go install github.com/hahwul/dalfox/v2@latest && \
     go install github.com/projectdiscovery/katana/cmd/katana@v1.1.0 && \
+    go install github.com/tomnomnom/qsreplace@latest && \
+    go install github.com/lc/gau/v2/cmd/gau@latest && \
+    go install github.com/PentestPad/subzy@latest && \
     ln -s /go/bin/* /usr/local/bin/
 
 WORKDIR $TOOLS_DIR
 
+# urldedupe - Build from source
+RUN git clone https://github.com/ameenmaali/urldedupe.git && \
+    cd urldedupe && \
+    cmake CMakeLists.txt && \
+    make && \
+    cp urldedupe /usr/bin/
+
 RUN git clone https://github.com/projectdiscovery/nuclei-templates.git $HOME/nuclei-templates
+
+RUN git clone https://github.com/coffinxp/nuclei-templates.git $HOME/nt
 
 RUN git clone https://github.com/devanshbatham/ParamSpider $TOOLS_DIR/ParamSpider && \
     python3 -m venv $TOOLS_DIR/ParamSpider/venv
@@ -71,6 +86,19 @@ RUN git clone https://github.com/r0075h3ll/Oralyzer $TOOLS_DIR/Oralyzer && \
     if [ -f "requirements.txt" ]; then \
         pip3 install --no-cache-dir --break-system-packages -r requirements.txt; \
     fi
+
+# loxs LFI Scanner
+RUN git clone https://github.com/siddiqodiq/LFI-Exploiter $TOOLS_DIR/loxs && \
+    cd $TOOLS_DIR/loxs && \
+    if [ -f "requirements.txt" ]; then \
+        python3 -m venv venv && \
+        venv/bin/pip install --no-cache-dir -r requirements.txt; \
+    fi 
+
+# shcheck Security Headers Checker
+RUN git clone https://github.com/santoru/shcheck $TOOLS_DIR/shcheck && \
+    pip3 install --no-cache-dir --break-system-packages shcheck
+
 # GF patterns
 RUN mkdir -p $HOME/.gf && \
     git clone https://github.com/tomnomnom/gf && \

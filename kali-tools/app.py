@@ -1,4 +1,5 @@
-from threading import Thread
+from threading import Thread, Lock
+import time
 from venv import logger
 from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
@@ -18,6 +19,7 @@ from werkzeug.utils import secure_filename
 from subprocess import Popen, PIPE
 
 active_processes = {}
+process_lock = Lock()
 
 
 
@@ -80,13 +82,13 @@ def initialize():
 
 def is_valid_domain(domain):
     """Validate domain format"""
-    pattern = r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    pattern = r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:[0-9]+)?$'
     return re.match(pattern, domain) is not None
 
 def is_valid_url(url):
     """Validate URL format"""
-    url_pattern = r'^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/\S*)?$'
-    domain_pattern = r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    url_pattern = r'^https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:[0-9]+)?(/\S*)?$'
+    domain_pattern = r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(:[0-9]+)?$'
     return re.match(url_pattern, url) or re.match(domain_pattern, url)
 
 def allowed_file(filename):
@@ -284,15 +286,20 @@ def url_fuzzer():
                 universal_newlines=True
             )
             
-            # Simpan proses ke dictionary
-            active_processes[session_id] = process
+            # Simpan proses dan filepath ke dictionary
+            with process_lock:
+                active_processes[session_id] = {
+                    'process': process,
+                    'filepath': filepath
+                }
             
             # Read output line by line
             for line in process.stdout:
-                if session_id in active_processes:  # Cek jika proses belum dihentikan
-                    output_queue.put(line)
-                else:
-                    break  # Keluar jika proses diminta berhenti
+                with process_lock:
+                    if session_id in active_processes:  # Cek jika proses belum dihentikan
+                        output_queue.put(line)
+                    else:
+                        break  # Keluar jika proses diminta berhenti
             
             process.wait()
             output_queue.put(None)  # Signal completion
@@ -300,11 +307,10 @@ def url_fuzzer():
             output_queue.put(f"Error: {str(e)}")
             output_queue.put(None)
         finally:
-            # Bersihkan resource
-            if session_id in active_processes:
-                del active_processes[session_id]
-            if os.path.exists(filepath):
-                os.remove(filepath)
+            # Hanya hapus dari active_processes, file akan dibersihkan oleh cleanup function
+            with process_lock:
+                if session_id in active_processes:
+                    del active_processes[session_id]
     
     # Start ffuf in a separate thread
     Thread(target=run_ffuf).start()
@@ -320,30 +326,49 @@ def url_fuzzer():
                 except Empty:
                     continue
         finally:
-            # Cleanup jika ada
-            if os.path.exists(filepath):
-                os.remove(filepath)
+            # Cleanup file setelah streaming selesai
+            cleanup_resources_fuzz(session_id, filepath)
     
     return Response(generate(), mimetype='text/html'), 200, {'X-Session-ID': session_id}
 
 def cleanup_resources_fuzz(session_id, filepath=None):
     """Bersihkan resource untuk session tertentu"""
     logger.debug(f"Cleaning up resources for session_id: {session_id}")
-    process = active_processes.pop(session_id, None)
-    if process:
-        logger.debug(f"Terminating process for session_id: {session_id}")
-        try:
-            process.terminate()
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            logger.debug(f"Forcing kill for session_id: {session_id}")
-            process.kill()
-    if filepath and os.path.exists(filepath):
-        logger.debug(f"Removing file: {filepath}")
-        try:
-            os.remove(filepath)
-        except FileNotFoundError:
-            pass
+    
+    with process_lock:
+        # Ambil dan hapus data dari active_processes
+        process_data = active_processes.pop(session_id, None)
+    
+    if process_data:
+        if isinstance(process_data, dict):
+            process = process_data.get('process')
+            stored_filepath = process_data.get('filepath')
+        else:
+            # Untuk backward compatibility jika masih ada format lama
+            process = process_data
+            stored_filepath = None
+            
+        if process:
+            logger.debug(f"Terminating process for session_id: {session_id}")
+            try:
+                process.terminate()
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                logger.debug(f"Forcing kill for session_id: {session_id}")
+                process.kill()
+            except Exception as e:
+                logger.error(f"Error terminating process: {str(e)}")
+        
+        # Gunakan filepath yang disimpan atau yang diberikan sebagai parameter
+        file_to_remove = filepath or stored_filepath
+        if file_to_remove and os.path.exists(file_to_remove):
+            logger.debug(f"Removing file: {file_to_remove}")
+            try:
+                os.remove(file_to_remove)
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                logger.error(f"Error removing file {file_to_remove}: {str(e)}")
 
 @app.route('/api/fuzz/stop', methods=['POST'])
 def stop_fuzzing():
@@ -353,11 +378,19 @@ def stop_fuzzing():
         return jsonify({"error": "Session ID is required"}), 400
 
     session_id = data['session_id']
-    if session_id not in active_processes:
-        return jsonify({"error": "Session not found or already terminated"}), 404
-
+    
+    with process_lock:
+        if session_id not in active_processes:
+            return jsonify({"error": "Session not found or already terminated"}), 404
+        
+        # Ambil filepath sebelum cleanup
+        process_data = active_processes.get(session_id)
+        filepath = None
+        if isinstance(process_data, dict):
+            filepath = process_data.get('filepath')
+    
     try:
-        cleanup_resources_fuzz(session_id)
+        cleanup_resources_fuzz(session_id, filepath)
         return jsonify({"message": "Fuzzing stopped successfully"}), 200
     except Exception as e:
         logger.error(f"Failed to stop fuzzing: {str(e)}")
@@ -387,8 +420,15 @@ def crawl_url():
             output = execute_paramspider(command)
             results = parse_paramspider_output(output) if output else []
             
-            # Cleanup
-            os.remove(filepath)
+            # Cleanup file terlebih dahulu
+            try:
+                os.remove(filepath)
+            except FileNotFoundError:
+                pass
+            
+            # Tunggu sebentar sebelum cleanup results untuk memastikan proses selesai
+            import time
+            time.sleep(2)
             cleanup_results()
             
             return jsonify({
@@ -408,6 +448,9 @@ def crawl_url():
             output = execute_paramspider(command)
             results = parse_paramspider_output(output) if output else []
             
+            # Tunggu sebentar sebelum cleanup results untuk memastikan proses selesai
+            import time
+            time.sleep(2)
             cleanup_results()
             
             return jsonify({
@@ -421,6 +464,9 @@ def crawl_url():
             
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+        # Tunggu sebentar sebelum cleanup pada error handling
+        import time
+        time.sleep(1)
         cleanup_results()
         return jsonify({"error": str(e)}), 500
 
@@ -428,6 +474,12 @@ def execute_paramspider(command):
     """Execute paramspider and return live output"""
     try:
         logger.debug(f"Executing: {' '.join(command)}")
+        
+        # Pastikan directory results ada sebelum menjalankan paramspider
+        results_dir = "results"
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir, exist_ok=True)
+            logger.debug(f"Created results directory: {results_dir}")
         
         process = subprocess.Popen(
             command,
@@ -438,12 +490,18 @@ def execute_paramspider(command):
             universal_newlines=True
         )
         
+        # Tunggu proses selesai dengan timeout
         output, error = process.communicate(timeout=300)
         
         if process.returncode != 0:
             logger.error(f"Paramspider error: {error.strip()}")
             return None
-            
+        
+        # Tunggu sedikit untuk memastikan semua file operations selesai
+        import time
+        time.sleep(0.5)
+        
+        logger.debug("Paramspider execution completed successfully")
         return output
         
     except subprocess.TimeoutExpired:
@@ -464,13 +522,38 @@ def parse_paramspider_output(output):
     return list(set(urls))
 
 def cleanup_results():
-    """Clean up results directory"""
+    """Clean up results directory with delay and retry mechanism"""
     try:
-        if os.path.exists("results"):
-            subprocess.run(["rm", "-rf", "results"], check=True)
-            logger.debug("Cleaned up results directory")
+        results_dir = "results"
+        if os.path.exists(results_dir):
+            # Tunggu untuk memastikan semua proses file selesai
+            import time
+            time.sleep(1)
+            
+            # Implementasi retry mechanism untuk cleanup
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    subprocess.run(["rm", "-rf", results_dir], check=True, timeout=10)
+                    logger.debug("Cleaned up results directory successfully")
+                    break
+                except subprocess.CalledProcessError as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Cleanup attempt {attempt + 1} failed: {str(e)}, retrying in 0.5s...")
+                        time.sleep(0.5)
+                    else:
+                        logger.error(f"Failed to cleanup results directory after {max_retries} attempts: {str(e)}")
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"Cleanup timeout on attempt {attempt + 1}")
+                    if attempt < max_retries - 1:
+                        time.sleep(0.5)
+                    else:
+                        logger.error("Cleanup timed out after multiple attempts")
+                except Exception as e:
+                    logger.error(f"Unexpected error during cleanup attempt {attempt + 1}: {str(e)}")
+                    break
     except Exception as e:
-        logger.error(f"Error cleaning up results: {str(e)}")
+        logger.error(f"Error in cleanup_results function: {str(e)}")
 
 
 @app.route('/api/waf', methods=['POST'])
@@ -653,12 +736,19 @@ def whois_lookup():
         )
 
         if result.returncode != 0:
-            error_msg = result.stderr.strip() or "WHOIS lookup failed"
+            error_msg = result.stderr.strip() or "No match for Target"
             logger.error(f"WHOIS error: {error_msg}")
             return jsonify({"error": error_msg}), 500
 
         # Format output whois
         whois_data = result.stdout.strip()
+        
+        # Filter output sampai keyword tertentu
+        filter_keyword = "Last update of whois database"
+        if filter_keyword in whois_data:
+            # Potong output sampai keyword (termasuk keyword)
+            end_index = whois_data.find(filter_keyword) + len(filter_keyword)
+            whois_data = whois_data[:end_index]
         
         return jsonify({
             "status": "success",
@@ -926,6 +1016,11 @@ def xss_scan():
                 
             command.extend(["url", target_url])
             
+            # Add cookie header if provided
+            if request.form.get('cookie'):
+                cookie_value = request.form['cookie']
+                command.extend(["-H", f"Cookie: {cookie_value}"])
+            
             if mode == '1':  # Default payload
                 command.extend(["-b", "https://hahwul.xss.ht"])
             elif mode == '2':  # Portswigger payload
@@ -943,6 +1038,11 @@ def xss_scan():
                 
             target_path = save_uploaded_file(target_file)
             command.extend(["file", target_path])
+            
+            # Add cookie header if provided
+            if request.form.get('cookie'):
+                cookie_value = request.form['cookie']
+                command.extend(["-H", f"Cookie: {cookie_value}"])
             
             if mode == '4':  # Default payload
                 command.extend(["-b", "https://hahwul.xss.ht"])
@@ -1509,7 +1609,7 @@ def enumerate_params():
         if not data.get('pattern'):
             return jsonify({"error": "Pattern is required"}), 400
         
-        valid_patterns = ['idor', 'rce', 'sqli', 'lfi', 'img-traversal']
+        valid_patterns = ['idor', 'rce', 'sqli', 'lfi', 'img-traversal', 'redirect', 'xss']
         pattern = data['pattern']
         if pattern not in valid_patterns:
             return jsonify({"error": f"Invalid pattern. Valid options: {', '.join(valid_patterns)}"}), 400
@@ -1690,6 +1790,256 @@ def subzy_scan():
     except Exception as e:
         logger.error(f"Subzy scan error: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/lfi-scan', methods=['POST'])
+def lfi_scan():
+    """Endpoint for LFI scanning with cookie support"""
+    session_id = str(uuid.uuid4())
+    found_vulns = False
+    
+    try:
+        data = request.form.to_dict()
+        files = request.files
+        
+        # Validate minimum requirements
+        if not data.get('mode'):
+            return jsonify({"error": "Scan mode is required (basic/advanced)"}), 400
+
+        # Prepare base command
+        base_cmd = "cd ~/tools/loxs && python3 lfi.py"
+        command_parts = []
+        cleanup_files = []
+
+        # Handle authentication cookies
+        if 'cookie_file' in files:
+            cookie_file = files['cookie_file']
+            cookie_path = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{secure_filename(cookie_file.filename)}"))
+            cookie_file.save(cookie_path)
+            cleanup_files.append(cookie_path)
+            command_parts.append(f'--cookie-file "{cookie_path}"')
+        elif data.get('cookie'):
+            command_parts.append(f'--cookie "{data["cookie"]}"')
+
+        # Basic mode
+        if data['mode'] == 'basic':
+            if 'file' in files:
+                file = files['file']
+                if not allowed_file(file.filename):
+                    return jsonify({"error": "Only text files are allowed"}), 400
+                
+                filepath = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{secure_filename(file.filename)}"))
+                file.save(filepath)
+                cleanup_files.append(filepath)
+                command_parts.append(f'-l "{filepath}"')
+            elif data.get('url'):
+                command_parts.append(f'-u "{data["url"]}"')
+            else:
+                return jsonify({"error": "Either URL or file is required for basic mode"}), 400
+
+        # Advanced mode
+        elif data['mode'] == 'advanced':
+            if 'file' in files:
+                file = files['file']
+                if not allowed_file(file.filename):
+                    return jsonify({"error": "Only text files are allowed"}), 400
+                
+                filepath = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{secure_filename(file.filename)}"))
+                file.save(filepath)
+                cleanup_files.append(filepath)
+                command_parts.append(f'-l "{filepath}"')
+            elif data.get('url'):
+                command_parts.append(f'-u "{data["url"]}"')
+            else:
+                return jsonify({"error": "Either URL or file is required for advanced mode"}), 400
+
+            if 'payload_file' in files:
+                payload_file = files['payload_file']
+                payload_path = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{secure_filename(payload_file.filename)}"))
+                payload_file.save(payload_path)
+                cleanup_files.append(payload_path)
+                command_parts.append(f'-p "{payload_path}"')
+
+            if data.get('filter') == 'true':
+                command_parts.append('-f')
+            if data.get('success_criteria'):
+                command_parts.append(f'-c "{data["success_criteria"]}"')
+
+        # Build final command
+        command = f"{base_cmd} {' '.join(command_parts)}"
+        logger.debug(f"Executing LFI scan command: {command}")
+
+        # Process management
+        output_queue = Queue()
+        
+        def run_scan():
+            nonlocal found_vulns
+            try:
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                    shell=True,
+                    cwd=os.path.expanduser('~/tools/loxs')
+                )
+                
+                active_processes[session_id] = process
+                time.sleep(1)  # Give some time for process to start
+                for line in process.stdout:
+                    if session_id not in active_processes:
+                        break
+                    if line.strip():
+                        if "VULNERABLE" in line or "Found" in line:
+                            found_vulns = True
+                        output_queue.put(line)
+                
+                process.wait()
+                if not found_vulns:
+                    output_queue.put("\n[INFO] No LFI vulnerabilities found\n")
+                output_queue.put(None)
+            except Exception as e:
+                output_queue.put(f"[ERROR] {str(e)}\n")
+                output_queue.put(None)
+            finally:
+                for filepath in cleanup_files:
+                    try:
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                    except Exception as e:
+                        logger.error(f"Error cleaning up file {filepath}: {str(e)}")
+                active_processes.pop(session_id, None)
+        
+        Thread(target=run_scan).start()
+        
+        def generate():
+            try:
+                yield "\n"  # Early flush
+                
+                while True:
+                    if session_id not in active_processes:
+                        break
+                    
+                    try:
+                        line = output_queue.get(timeout=1)
+                        if line is None:
+                            break
+                        yield line
+                    except Empty:
+                        continue
+            finally:
+                active_processes.pop(session_id, None)
+        
+        response = Response(generate(), mimetype='text/plain')
+        response.headers['X-Session-ID'] = session_id
+        response.headers['X-Scan-Mode'] = data['mode']
+        response.headers['X-Vulnerabilities-Found'] = str(found_vulns).lower()
+        return response
+    
+    except Exception as e:
+        active_processes.pop(session_id, None)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/lfi-scan/stop', methods=['POST'])
+def stop_lfi_scan():
+    """Stop running LFI scan"""
+    data = request.json
+    if not data or 'session_id' not in data:
+        return jsonify({"error": "session_id is required"}), 400
+    
+    session_id = data['session_id']
+    
+    if session_id in active_processes:
+        process = active_processes[session_id]
+        try:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            
+            active_processes.pop(session_id, None)
+            return jsonify({"status": "stopped"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    else:
+        return jsonify({"error": "Scan not found or already stopped"}), 404
+    
+
+@app.route('/api/check-headers', methods=['POST'])
+def check_headers():
+    """Endpoint for checking security headers - direct response"""
+    try:
+        data = request.json if request.is_json else request.form.to_dict()
+        
+        # Validate input
+        if not data.get('url'):
+            return jsonify({"error": "URL is required"}), 400
+        
+        url = data['url']
+        if not is_valid_url(url):
+            return jsonify({"error": "Invalid URL format"}), 400
+
+        # Prepare command
+        command = f"cd ~/tools/shcheck && python3 shcheck.py {url}"
+        logger.debug(f"Executing command: {command}")
+
+        # Execute command directly and wait for completion
+        process = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=True,
+            cwd=os.path.expanduser('~/tools/shcheck'),
+            timeout=300  # 5 minute timeout
+        )
+        
+        if process.returncode != 0:
+            error_msg = process.stderr.strip() or "Security headers check failed"
+            logger.error(f"shcheck error: {error_msg}")
+            return jsonify({"error": error_msg}), 500
+
+        # Return complete result
+        return jsonify({
+            "status": "success",
+            "url": url,
+            "results": process.stdout.strip()
+        })
+    
+    except subprocess.TimeoutExpired:
+        logger.error("Security headers check timed out")
+        return jsonify({"error": "Check timed out after 5 minutes"}), 504
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/check-headers/stop', methods=['POST'])
+def stop_header_check():
+    """Stop running security headers check"""
+    data = request.json
+    if not data or 'session_id' not in data:
+        return jsonify({"error": "session_id is required"}), 400
+    
+    session_id = data['session_id']
+    
+    if session_id in active_processes:
+        process = active_processes[session_id]
+        try:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            
+            active_processes.pop(session_id, None)
+            return jsonify({"status": "stopped"})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    else:
+        return jsonify({"error": "Process not found or already stopped"}), 404
 
 def is_valid_ip(ip):
     """Validasi format IP address"""
