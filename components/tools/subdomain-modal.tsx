@@ -55,7 +55,7 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
       } else {
         toast({
           title: "Invalid file type",
-          description: "Please upload a .txt file",
+          description: "upload a .txt file",
           variant: "destructive",
         });
       }
@@ -170,29 +170,48 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
   };
 
   const handleDownloadResults = () => {
-    if (activeCheckResults.length === 0) {
+    // Cek apakah ada hasil untuk didownload
+    const hasEnumerationResults = enumerationResults.length > 0;
+    const hasActiveCheckResults = activeCheckResults.length > 0;
+    
+    if (!hasEnumerationResults && !hasActiveCheckResults) {
       toast({
         title: "Tidak ada hasil untuk didownload",
-        description: "Tidak ada URL aktif yang ditemukan",
+        description: "Belum ada hasil yang ditemukan",
         variant: "destructive",
       });
       return;
     }
   
     try {
-      // Ambil URL bersih dari struktur data
-      const cleanUrls = activeCheckResults.map(result => {
-        // Gunakan final_url jika ada dan berbeda dengan URL awal
-        return result.final_url && result.final_url !== result.url 
-          ? result.final_url 
-          : result.url;
-      });
-  
-      // Buat konten file (format plain)
-      const fileContent = cleanUrls.join('\n');
+      let fileContent = '';
+      let fileName = '';
+      let resultCount = 0;
       
-      // Generate nama file
-      const fileName = `active-urls-${new Date().toISOString().slice(0, 10)}.txt`;
+      if (activeTab === "enumeration" && hasEnumerationResults) {
+        // Download hasil enumeration
+        fileContent = enumerationResults.join('\n');
+        fileName = `subdomains-enumeration-${new Date().toISOString().slice(0, 10)}.txt`;
+        resultCount = enumerationResults.length;
+      } else if (activeTab === "activeCheck" && hasActiveCheckResults) {
+        // Download hasil active check
+        const cleanUrls = activeCheckResults.map(result => {
+          // Gunakan final_url jika ada dan berbeda dengan URL awal
+          return result.final_url && result.final_url !== result.url 
+            ? result.final_url 
+            : result.url;
+        });
+        fileContent = cleanUrls.join('\n');
+        fileName = `active-subdomains-${new Date().toISOString().slice(0, 10)}.txt`;
+        resultCount = cleanUrls.length;
+      } else {
+        toast({
+          title: "Tidak ada hasil untuk didownload",
+          description: "Tidak ada hasil pada tab yang aktif",
+          variant: "destructive",
+        });
+        return;
+      }
   
       // Proses download
       const blob = new Blob([fileContent], { type: 'text/plain' });
@@ -207,7 +226,7 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
   
       toast({
         title: "Download berhasil",
-        description: `Berhasil menyimpan ${cleanUrls.length} URL aktif`,
+        description: `Berhasil menyimpan ${resultCount} hasil`,
       });
     } catch (error) {
       toast({
@@ -381,6 +400,10 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
                     variant="outline" 
                     onClick={handleDownloadResults}
                     aria-label="Download results"
+                    disabled={
+                      (activeTab === "enumeration" && enumerationResults.length === 0) ||
+                      (activeTab === "activeCheck" && activeCheckResults.length === 0)
+                    }
                   >
                     <Download className="h-4 w-4" />
                   </Button>
