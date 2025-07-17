@@ -410,24 +410,23 @@ def crawl_url():
             if not allowed_file(file.filename):
                 return jsonify({"error": "Only .txt files are allowed"}), 400
                 
-            # Simpan file
+            # Save the file
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             
-            # Eksekusi paramspider langsung dengan file input
+            # Execute paramspider with the input file
             command = ["paramspider", "-l", filepath, "-s"]
             output = execute_paramspider(command)
             results = parse_paramspider_output(output) if output else []
             
-            # Cleanup file terlebih dahulu
+            # Cleanup the uploaded file
             try:
                 os.remove(filepath)
             except FileNotFoundError:
                 pass
             
-            # Tunggu sebentar sebelum cleanup results untuk memastikan proses selesai
-            import time
+            # Wait before cleanup to ensure process completion
             time.sleep(2)
             cleanup_results()
             
@@ -448,8 +447,7 @@ def crawl_url():
             output = execute_paramspider(command)
             results = parse_paramspider_output(output) if output else []
             
-            # Tunggu sebentar sebelum cleanup results untuk memastikan proses selesai
-            import time
+            # Wait before cleanup to ensure process completion
             time.sleep(2)
             cleanup_results()
             
@@ -464,25 +462,34 @@ def crawl_url():
             
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
-        # Tunggu sebentar sebelum cleanup pada error handling
-        import time
         time.sleep(1)
         cleanup_results()
         return jsonify({"error": str(e)}), 500
 
 def execute_paramspider(command):
-    """Execute paramspider and return live output"""
+    """Execute paramspider within its virtual environment and return live output"""
     try:
         logger.debug(f"Executing: {' '.join(command)}")
         
-        # Pastikan directory results ada sebelum menjalankan paramspider
+        # Ensure results directory exists
         results_dir = "results"
         if not os.path.exists(results_dir):
             os.makedirs(results_dir, exist_ok=True)
             logger.debug(f"Created results directory: {results_dir}")
         
+        # Change to ParamSpider directory and activate virtualenv
+        paramspider_dir = os.path.expanduser("~/tools/ParamSpider")
+        activate_script = os.path.join(paramspider_dir, ".venv/bin/activate")
+        
+        # Prepare the full command sequence
+        full_command = [
+            "/bin/bash",
+            "-c",
+            f". {activate_script} && cd {paramspider_dir} && {' '.join(command)}"
+        ]
+        
         process = subprocess.Popen(
-            command,
+            full_command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -490,15 +497,14 @@ def execute_paramspider(command):
             universal_newlines=True
         )
         
-        # Tunggu proses selesai dengan timeout
+        # Wait for process completion with timeout
         output, error = process.communicate(timeout=300)
         
         if process.returncode != 0:
             logger.error(f"Paramspider error: {error.strip()}")
             return None
         
-        # Tunggu sedikit untuk memastikan semua file operations selesai
-        import time
+        # Short wait to ensure all file operations complete
         time.sleep(0.5)
         
         logger.debug("Paramspider execution completed successfully")
