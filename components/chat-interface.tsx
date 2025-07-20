@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from "react"
-import { Send, Loader2, ChevronDown } from "lucide-react"
+import { Send, Loader2, ChevronDown, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
@@ -192,12 +192,22 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
   }, [messages, isAtBottom, scrollToBottom])
 
   const stopStreaming = () => {
+    console.log('🛑 Stopping generation...')
+    
+    // Abort the current request
     if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+      abortControllerRef.current.abort('User requested stop')
       abortControllerRef.current = null
     }
+    
+    // Update UI state
     streamingRef.current = false
     setIsLoading(false)
+    
+    toast({
+      title: "Generation stopped",
+      description: "Message generation was stopped successfully.",
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -207,6 +217,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
     setIsLoading(true)
     streamingRef.current = true
     
+    // Create new abort controller
     abortControllerRef.current = new AbortController()
     
     const userMessage: Message = {
@@ -232,6 +243,10 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
       })
 
       if (!response.ok) {
+        if (response.status === 499) {
+          console.log('🛑 Request was aborted')
+          return
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
@@ -251,7 +266,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
       
       console.log('🚀 Starting real-time streaming...')
       
-      while (streamingRef.current) {
+      while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
         try {
           const { done, value } = await reader.read()
           if (done) {
@@ -284,10 +299,6 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         console.log('🛑 Request aborted')
-        toast({
-          title: "Stream stopped",
-          description: "Message generation was stopped.",
-        })
       } else {
         console.error("❌ Chat Error:", error)
         setMessages(prev => [...prev, {
@@ -417,17 +428,6 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
                 Hi, {session?.user?.name || 'User'} !
               </h2>
             </div>
-            
-            {isLoading && streamingRef.current && (
-              <Button
-                onClick={stopStreaming}
-                variant="outline"
-                size="sm"
-                className="border-red-500 text-red-500 hover:bg-red-500/10"
-              >
-                Stop Generation
-              </Button>
-            )}
           </div>
 
           <div 
@@ -506,17 +506,30 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
                   }
                 }}
               />
-              <Button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="gradient-btn"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+              <div className="flex gap-2">
+                {isLoading && streamingRef.current ? (
+                  <Button
+                    type="button"
+                    onClick={stopStreaming}
+                    variant="outline"
+                    className="border-red-500 text-red-500 hover:bg-red-500/10 hover:border-red-400"
+                  >
+                    <Square className="h-4 w-4" />
+                  </Button>
                 ) : (
-                  <Send className="h-5 w-5" />
+                  <Button
+                    type="submit"
+                    disabled={isLoading || !input.trim()}
+                    className="gradient-btn"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Send className="h-5 w-5" />
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </form>
           </div>
         </div>

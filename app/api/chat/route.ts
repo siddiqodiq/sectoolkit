@@ -10,13 +10,12 @@ import { AIMessage, HumanMessage } from '@langchain/core/messages'
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
-  const { messages, chatId } = await req.json()
+  const { messages, chatId, abortSignal } = await req.json()
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Pastikan chatId valid dan ambil riwayat percakapan
   let chat = null
   let previousMessages: { type: string; data: { content: string } }[] = []
   if (chatId) {
@@ -28,7 +27,7 @@ export async function POST(req: Request) {
       include: {
         messages: {
           orderBy: { createdAt: 'asc' },
-          take: 10 // Ambil 10 pesan terakhir saja
+          take: 10
         }
       }
     })
@@ -41,7 +40,6 @@ export async function POST(req: Request) {
     }
   }
 
-  // Jika tidak ada chatId atau chat tidak ditemukan, buat baru
   if (!chat) {
     chat = await prisma.chat.create({
       data: {
@@ -52,7 +50,6 @@ export async function POST(req: Request) {
     })
   }
 
-  // Simpan pesan user ke database
   const userMessage = messages[messages.length - 1]
   if (userMessage.role === 'user') {
     await prisma.message.create({
@@ -67,67 +64,106 @@ export async function POST(req: Request) {
   try {
     console.log('🔗 Connecting to Ollama at:', process.env.OLLAMA_HOST)
 
-    // Buat array pesan untuk Ollama
-    const allMessages: any[] = []
+    // Prepare messages for Ollama
+    const ollamaMessages: { role: string; content: any }[] = []
     
-    // Tambahkan pesan sebelumnya
     for (const msg of previousMessages) {
-      if (msg.type === 'human') {
-        allMessages.push(new HumanMessage(msg.data.content))
-      } else {
-        allMessages.push(new AIMessage(msg.data.content))
-      }
+      ollamaMessages.push({
+        role: msg.type === 'human' ? 'user' : 'assistant',
+        content: msg.data.content
+      })
     }
     
-    // Tambahkan pesan user baru
-    allMessages.push(new HumanMessage(userMessage.content))
-
-    // Buat ChatOllama instance
-    const llm = new ChatOllama({
-      baseUrl: process.env.OLLAMA_HOST || 'http://localhost:11434',
-      model: process.env.OLLAMA_MODEL || 'pentest-ai',
-      temperature: 0.7,
-      // Enable streaming
-      disableStreaming: false,
+    ollamaMessages.push({
+      role: 'user',
+      content: userMessage.content
     })
 
-    console.log('💬 Starting real-time stream from Ollama...')
-    
-    // Buat real-time streaming response
     const encoder = new TextEncoder()
     let fullResponse = ''
+    let isAborted = false
     
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          // Stream dari LLM langsung
-          const stream = await llm.stream(allMessages)
-          
-          for await (const chunk of stream) {
-            const content = chunk.content
-            
-            if (content) {
-              const contentStr = typeof content === 'string' ? content : JSON.stringify(content)
-              fullResponse += contentStr
-              
-              // Kirim chunk secara real-time
-              controller.enqueue(encoder.encode(contentStr))
-            }
+          // Direct fetch to Ollama with abort signal
+          const response = await fetch(`${process.env.OLLAMA_HOST}/api/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: process.env.OLLAMA_MODEL || 'pentest-ai',
+              messages: ollamaMessages,
+              stream: true,
+              options: {
+                temperature: 0.7
+              }
+            }),
+            signal: req.signal // Use request abort signal directly
+          })
+
+          if (!response.ok) {
+            throw new Error(`Ollama API error: ${response.status}`)
           }
 
-          console.log('✅ Streaming completed')
+          const reader = response.body?.getReader()
+          if (!reader) throw new Error('No reader available')
 
-          // Simpan response AI ke database setelah streaming selesai
+          while (true) {
+            // Check abort signal
+            if (req.signal?.aborted) {
+              console.log('🛑 Request aborted, closing reader')
+              reader.cancel()
+              isAborted = true
+              break
+            }
+
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = new TextDecoder().decode(value)
+            const lines = chunk.split('\n').filter(line => line.trim())
+
+            for (const line of lines) {
+              if (req.signal?.aborted) {
+                isAborted = true
+                break
+              }
+
+              try {
+                const parsed = JSON.parse(line)
+                if (parsed.message?.content) {
+                  const content = parsed.message.content
+                  fullResponse += content
+                  controller.enqueue(encoder.encode(content))
+                }
+                
+                if (parsed.done) {
+                  console.log('✅ Ollama streaming completed')
+                  break
+                }
+              } catch (parseError) {
+                // Skip invalid JSON lines
+                continue
+              }
+            }
+
+            if (isAborted) break
+          }
+
+          // Save to database
           if (fullResponse) {
+            const finalContent = isAborted ? fullResponse + ' [Generation stopped]' : fullResponse
+            
             await prisma.message.create({
               data: {
                 chatId: chat.id,
-                content: fullResponse,
+                content: finalContent,
                 role: 'ASSISTANT'
               }
             })
 
-            // Update judul chat jika ini adalah pesan pertama
             if (previousMessages.length === 0) {
               await prisma.chat.update({
                 where: { id: chat.id },
@@ -140,9 +176,28 @@ export async function POST(req: Request) {
 
           controller.close()
         } catch (error) {
-          console.error('❌ Streaming error:', error)
-          controller.error(error)
+          if (error instanceof Error && (error.name === 'AbortError' || req.signal?.aborted)) {
+            console.log('🛑 Ollama request aborted')
+            isAborted = true
+            
+            if (fullResponse) {
+              await prisma.message.create({
+                data: {
+                  chatId: chat.id,
+                  content: fullResponse + ' [Generation stopped]',
+                  role: 'ASSISTANT'
+                }
+              })
+            }
+          } else {
+            console.error('❌ Ollama streaming error:', error)
+            controller.error(error)
+          }
         }
+      },
+      
+      cancel() {
+        console.log('🛑 Stream cancelled by client')
       }
     })
 
@@ -158,10 +213,11 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('❌ Chat Error:', error)
     
-    // Enhanced error handling
     let errorMessage = 'Internal Server Error'
     if (error instanceof Error) {
-      if (error.message.includes('fetch failed') || error.message.includes('ENOTFOUND')) {
+      if (error.name === 'AbortError') {
+        errorMessage = 'Request was aborted'
+      } else if (error.message.includes('fetch failed') || error.message.includes('ENOTFOUND')) {
         errorMessage = `Cannot connect to Ollama at ${process.env.OLLAMA_HOST}`
       } else {
         errorMessage = error.message
