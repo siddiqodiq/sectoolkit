@@ -7,10 +7,11 @@ import { ConversationChain } from 'langchain/chains'
 import { BufferMemory } from 'langchain/memory'
 import { ChatMessageHistory } from 'langchain/stores/message/in_memory'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
+import { getKnowledgeBaseResponse } from './utils/chroma'
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
-  const { messages, chatId, abortSignal } = await req.json()
+  const { messages, chatId, abortSignal, useKnowledgeBase = false } = await req.json()
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -64,7 +65,48 @@ export async function POST(req: Request) {
   try {
     console.log('🔗 Connecting to Ollama at:', process.env.OLLAMA_HOST)
 
-    // Prepare messages for Ollama
+    // Handle Knowledge Base Request
+    if (useKnowledgeBase) {
+      console.log('🔍 Using Knowledge Base mode...')
+      
+      try {
+        const ragResponse = await getKnowledgeBaseResponse(userMessage.content)
+        const fullResponse = `${ragResponse}`
+        
+        // Save AI response to database
+        await prisma.message.create({
+          data: {
+            chatId: chat.id,
+            content: fullResponse,
+            role: 'ASSISTANT'
+          }
+        })
+
+        // Update chat title if this is a new conversation
+        if (previousMessages.length === 0) {
+          await prisma.chat.update({
+            where: { id: chat.id },
+            data: {
+              title: userMessage.content.substring(0, 50)
+            }
+          })
+        }
+
+        // Return non-streaming response for knowledge base
+        return new Response(fullResponse, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'X-Chat-Id': chat.id,
+          },
+        })
+      } catch (ragError) {
+        console.error('❌ Knowledge base error:', ragError)
+        console.log('🔄 Falling back to normal AI mode...')
+        // Continue with normal processing if knowledge base fails
+      }
+    }
+
+    // Prepare messages for Ollama (original logic)
     const ollamaMessages: { role: string; content: any }[] = []
     
     for (const msg of previousMessages) {
@@ -207,6 +249,7 @@ export async function POST(req: Request) {
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
         'Transfer-Encoding': 'chunked',
+        'X-Chat-Id': chat.id,
       },
     })
 

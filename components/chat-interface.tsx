@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from "react"
-import { Send, Loader2, ChevronDown, Square } from "lucide-react"
+import { Send, Loader2, ChevronDown, Square, Brain, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
@@ -10,6 +10,15 @@ import { Message } from "@/app/types"
 import { CodeBlock } from "@/components/code-block"
 import { useToast } from "@/components/ui/use-toast"
 import { Logo } from "@/components/ui/logo"
+import { Switch } from "@/components/ui/switch"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import 'prismjs/themes/prism-tomorrow.css' 
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
@@ -35,6 +44,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const searchParams = useSearchParams()
   const { data: session } = useSession()
+  const [useKnowledgeBase, setUseKnowledgeBase] = useState(false)
   
   useEffect(() => {
     if (activeTool) {
@@ -44,6 +54,17 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
 
   const handleCloseToolModal = () => {
     setIsToolModalOpen(false)
+  }
+
+  // Handle knowledge base toggle
+  const handleKnowledgeBaseToggle = (checked: boolean) => {
+    setUseKnowledgeBase(checked)
+    toast({
+      title: checked ? "Knowledge Base Enabled" : "Knowledge Base Disabled",
+      description: checked 
+        ? "AI will now use the knowledge base for enhanced responses" 
+        : "AI will use standard responses without knowledge base",
+    })
   }
 
   const processContent = useCallback((content: string) => {
@@ -211,45 +232,56 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || streamingRef.current) return
+  e.preventDefault()
+  if (!input.trim() || streamingRef.current) return
 
-    setIsLoading(true)
-    streamingRef.current = true
-    
-    // Create new abort controller
-    abortControllerRef.current = new AbortController()
-    
-    const userMessage: Message = {
-      role: "user",
-      content: input,
-      id: Date.now().toString()
-    }
-    
-    setMessages(prev => [...prev, userMessage])
-    setInput("")
+  setIsLoading(true)
+  streamingRef.current = true
+  
+  abortControllerRef.current = new AbortController()
+  
+  const userMessage: Message = {
+    role: "user",
+    content: input,
+    id: Date.now().toString()
+  }
+  
+  setMessages(prev => [...prev, userMessage])
+  setInput("")
 
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          messages: [userMessage],
-          chatId: currentChatId
-        }),
-        signal: abortControllerRef.current.signal
-      })
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        messages: [userMessage],
+        chatId: currentChatId,
+        useKnowledgeBase
+      }),
+      signal: abortControllerRef.current.signal
+    })
 
-      if (!response.ok) {
-        if (response.status === 499) {
-          console.log('🛑 Request was aborted')
-          return
-        }
-        throw new Error(`HTTP error! status: ${response.status}`)
+    if (!response.ok) {
+      if (response.status === 499) {
+        console.log('🛑 Request was aborted')
+        return
       }
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
 
+    if (useKnowledgeBase) {
+      // Handle knowledge base response (non-streaming plain text)
+      const fullContent = await response.text() // Changed from response.json() to response.text()
+      
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: fullContent, 
+        id: `assistant-${Date.now()}` 
+      }])
+    } else {
+      // Original streaming handling
       const reader = response.body?.getReader()
       if (!reader) throw new Error("No reader available")
 
@@ -295,62 +327,78 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
           throw readError
         }
       }
-
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('🛑 Request aborted')
-      } else {
-        console.error("❌ Chat Error:", error)
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
-          id: `error-${Date.now()}`
-        }])
-        toast({
-          title: "Error",
-          description: "Failed to send message. Please try again.",
-          variant: "destructive",
-        })
-      }
-    } finally {
-      streamingRef.current = false
-      setIsLoading(false)
-      abortControllerRef.current = null
     }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('🛑 Request aborted')
+      toast({
+        title: "Request aborted",
+        description: "The request was cancelled",
+      })
+    } else {
+      console.error("Error:", error)
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Sorry, I encountered an error. Please try again.",
+        id: `error-${Date.now()}`
+      }])
+      toast({
+        title: "Error",
+        description: "Failed to get response from AI",
+        variant: "destructive",
+      })
+    }
+  } finally {
+    streamingRef.current = false
+    setIsLoading(false)
+    abortControllerRef.current = null
   }
+}
 
   const handleSendToolResults = async (content: string) => {
-    setIsToolModalOpen(false);
-    
-    const toolMessage: Message = {
-      role: "user",
-      content: `Here are the results from the penetration testing tool. Please analyze these results and provide insights on potential vulnerabilities and next steps:\n\n${content}`,
-      id: `tool-${Date.now()}`
-    };
+  setIsToolModalOpen(false);
+  
+  const toolMessage: Message = {
+    role: "user",
+    content: `Here are the results from the penetration testing tool. Please analyze these results and provide insights on potential vulnerabilities and next steps:\n\n${content}`,
+    id: `tool-${Date.now()}`
+  };
 
-    setMessages(prev => [...prev, toolMessage]);
-    
-    setIsLoading(true);
-    streamingRef.current = true;
-    abortControllerRef.current = new AbortController()
+  setMessages(prev => [...prev, toolMessage]);
+  
+  setIsLoading(true);
+  streamingRef.current = true;
+  abortControllerRef.current = new AbortController()
 
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          messages: [toolMessage],
-          chatId: currentChatId
-        }),
-        signal: abortControllerRef.current.signal
-      });
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        messages: [toolMessage],
+        chatId: currentChatId,
+        useKnowledgeBase
+      }),
+      signal: abortControllerRef.current.signal
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
+    if (useKnowledgeBase) {
+      // Handle knowledge base response (non-streaming plain text)
+      const fullContent = await response.text() // Changed from response.json() to response.text()
+      
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: fullContent, 
+        id: `assistant-${Date.now()}` 
+      }])
+    } else {
+      // Original streaming handling
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
 
@@ -389,36 +437,38 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
           throw readError
         }
       }
-
-      toast({
-        title: "Tool results analyzed",
-        description: "AI has completed analysis of the tool results.",
-      });
-    } catch (error) {
-      if (error instanceof Error && error.name !== 'AbortError') {
-        console.error("Error:", error);
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: "Sorry, I encountered an error processing the tool results. Please try again.",
-          id: `error-${Date.now()}`
-        }]);
-        toast({
-          title: "Error",
-          description: "Failed to process tool results",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      streamingRef.current = false;
-      setIsLoading(false);
-      abortControllerRef.current = null
     }
-  };
+
+    toast({
+      title: "Tool results analyzed",
+      description: "AI has completed analysis of the tool results.",
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name !== 'AbortError') {
+      console.error("Error:", error);
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Sorry, I encountered an error processing the tool results. Please try again.",
+        id: `error-${Date.now()}`
+      }]);
+      toast({
+        title: "Error",
+        description: "Failed to process tool results",
+        variant: "destructive",
+      });
+    }
+  } finally {
+    streamingRef.current = false;
+    setIsLoading(false);
+    abortControllerRef.current = null
+  }
+};
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden h-full">
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-hidden">
+          {/* Header with Knowledge Base Toggle */}
           <div className="flex items-center justify-between border-b border-gray-800 p-4">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full gradient-bg">
@@ -427,6 +477,84 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
               <h2 className="text-lg font-bold gradient-text">
                 Hi, {session?.user?.name || 'User'} !
               </h2>
+            </div>
+            
+            {/* Knowledge Base Settings Dropdown */}
+            <div className="flex items-center gap-2">
+              {/* Knowledge Base Status Indicator */}
+              {useKnowledgeBase && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-blue-300 font-medium">Knowledge Base Active</span>
+                </div>
+              )}
+              
+              {/* Settings Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-9 w-9 rounded-full transition-all duration-200 ${
+                      useKnowledgeBase 
+                        ? 'bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40' 
+                        : 'hover:bg-gray-700/50'
+                    }`}
+                  >
+                    <Brain className={`h-4 w-4 ${useKnowledgeBase ? 'text-blue-400' : 'text-gray-400'}`} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">AI Settings</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        Configure AI response mode
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {/* Knowledge Base Toggle */}
+                  <div className="px-2 py-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                          useKnowledgeBase ? 'bg-blue-500/20' : 'bg-gray-700/50'
+                        }`}>
+                          <Brain className={`h-4 w-4 ${useKnowledgeBase ? 'text-blue-400' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Knowledge Base</span>
+                          <span className="text-xs text-muted-foreground">
+                            Enhanced responses with RAG
+                          </span>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={useKnowledgeBase}
+                        onCheckedChange={handleKnowledgeBaseToggle}
+                        className="ml-2"
+                      />
+                    </div>
+                    
+                    {/* Description */}
+                    <div className="mt-3 text-xs text-muted-foreground bg-gray-800/50 rounded-md p-2">
+                      {useKnowledgeBase ? (
+                        <div className="flex items-start gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5"></div>
+                          <span>AI will use the knowledge base to provide more accurate and contextual responses about penetration testing.</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-start gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-gray-500 mt-1.5"></div>
+                          <span>AI will use standard responses without accessing the knowledge base.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -438,10 +566,18 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
               <div className="flex h-full items-center justify-center">
                 <div className="text-center max-w-md p-6 rounded-lg bg-gray-800/50 border border-gray-700">
                   <h3 className="text-xl font-bold mb-2 gradient-text">Welcome to Pungoe Pentest</h3>
-                  <p className="text-gray-400">
+                  <p className="text-gray-400 mb-4">
                     Your AI-powered penetration testing assistant. Ask questions about security testing, vulnerability
                     assessment, or use the tools sidebar to access specialized functions.
                   </p>
+                  
+                  {/* Knowledge Base Info */}
+                  <div className="flex items-center justify-center gap-2">
+                    <Brain className={`h-4 w-4 ${useKnowledgeBase ? 'text-blue-400' : 'text-gray-500'}`} />
+                    <span className="text-sm text-gray-500">
+                      Knowledge Base: {useKnowledgeBase ? 'Enabled' : 'Disabled'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -465,6 +601,12 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
                     <div className="flex-1">
                       <div className="font-medium flex items-center gap-2">
                         {message.role === "user" ? "You" : "PentestAI"}
+                        {message.role === "assistant" && useKnowledgeBase && (
+                          <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 rounded-full">
+                            <Brain className="h-3 w-3 text-blue-400" />
+                            <span className="text-xs text-blue-300">KB</span>
+                          </div>
+                        )}
                       </div>
                       <div className="mt-1 text-sm">
                         <MessageContent content={message.content} />

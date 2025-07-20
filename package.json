@@ -2,7 +2,6 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
-
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,6 +13,7 @@
     "@langchain/core": "^0.3.62",
     "@langchain/ollama": "^0.2.3",
     "@langchain/textsplitters": "^0.1.0",
+    "@libsql/client": "^0.15.10",
     "@prisma/client": "^6.8.2",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
