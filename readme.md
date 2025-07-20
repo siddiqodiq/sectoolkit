@@ -78,7 +78,7 @@ Layanan **Ollama** dan model **Pentest-AI** tidak disertakan dalam Docker Compos
 2. **Download model Pentest-AI dari Hugging Face** menggunakan perintah:
 
    ```bash
-   ollama run hf.co/mav23/Pentest_AI-GGUF:Q4_K_M
+   ollama run hf.co/mav23/Pentest_AI-GGUF:Q5_0
    ```
 
    Ini akan mengunduh dan menyiapkan model.
@@ -93,7 +93,7 @@ Layanan **Ollama** dan model **Pentest-AI** tidak disertakan dalam Docker Compos
 
 ---
 
-### 🌐 Mengakses dari Dalam Docker (masih dalam tahap perbaikan) 🟨
+### 🌐 Mengakses dari Dalam Docker 
 
 Karena **Ollama berjalan di luar container**, aplikasi di dalam Docker harus menggunakan alamat khusus ini untuk mengakses Ollama:
 
