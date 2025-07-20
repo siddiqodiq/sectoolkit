@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, memo, useMemo } from "react"
-import { Send, Loader2, Copy, Check, ChevronDown } from "lucide-react"
+import { Send, Loader2, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { ToolModal } from "@/components/tool-modal"
 import { Message } from "@/app/types"
 import { CodeBlock } from "@/components/code-block"
-import Prism from 'prismjs'
 import { useToast } from "@/components/ui/use-toast"
 import { Logo } from "@/components/ui/logo"
 import 'prismjs/themes/prism-tomorrow.css' 
@@ -29,14 +28,15 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
   const [showScrollButton, setShowScrollButton] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const streamingRef = useRef(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const { toast } = useToast()
   const scrollLockRef = useRef(false)
   const lastMessageLengthRef = useRef(0)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
   
   useEffect(() => {
-    // Open modal when activeTool changes to a non-null value
     if (activeTool) {
       setIsToolModalOpen(true)
     }
@@ -46,7 +46,6 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
     setIsToolModalOpen(false)
   }
 
-  // Process content and identify code blocks
   const processContent = useCallback((content: string) => {
     const parts: Array<{ type: 'text' | 'code'; content: string; language?: string }> = []
     let buffer = ""
@@ -89,7 +88,6 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
     return parts
   }, [])
 
-  // Load chat history when chatId changes
   useEffect(() => {
     const chatId = searchParams.get('chat')
     setCurrentChatId(chatId)
@@ -121,48 +119,42 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
     loadChat()
   }, [searchParams])
 
+  const MessageContent = memo(({ content }: { content: string }) => {
+    const parts = useMemo(() => processContent(content), [content]);
 
-
-   const MessageContent = memo(({ content }: { content: string }) => {
-  const parts = useMemo(() => processContent(content), [content]);
-
-  return (
-    <div className="whitespace-pre-wrap">
-      {parts.map((part, index) => {
-        if (part.type === 'code') {
-          // Optimasi berat untuk code block
+    return (
+      <div className="whitespace-pre-wrap">
+        {parts.map((part, index) => {
+          if (part.type === 'code') {
+            return (
+              <CodeBlock 
+                key={`code-${index}-${hashCode(part.content)}`}
+                code={part.content.trim()} 
+                language={part.language ?? "text"} 
+              />
+            );
+          }
+          
           return (
-            <CodeBlock 
-              key={`code-${index}-${hashCode(part.content)}`}
-              code={part.content.trim()} 
-              language={part.language ?? "text"} 
-            />
+            <span key={`text-${index}`} className="text-gray-200">
+              {part.content}
+            </span>
           );
-        }
-        
-        // Render sederhana untuk teks biasa
-        return (
-          <span key={`text-${index}`} className="text-gray-200">
-            {part.content}
-          </span>
-        );
-      })}
-    </div>
-  );
-});
+        })}
+      </div>
+    );
+  });
 
-// Helper function untuk generate stable key
-function hashCode(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+  function hashCode(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash;
   }
-  return hash;
-}
 
-   // Handle scroll behavior
   useEffect(() => {
     const container = chatContainerRef.current
     if (!container) return
@@ -174,7 +166,6 @@ function hashCode(str: string): number {
       setIsAtBottom(newIsAtBottom)
       setShowScrollButton(!newIsAtBottom)
       
-      // Jika user scroll ke atas, lock auto-scroll sementara
       if (!newIsAtBottom && scrollTop < lastMessageLengthRef.current) {
         scrollLockRef.current = true
       } else if (newIsAtBottom) {
@@ -187,112 +178,150 @@ function hashCode(str: string): number {
     container.addEventListener('scroll', handleScroll)
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
-   // Auto-scroll to bottom when new messages arrive
+
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior })
     }, 100)
   }, [])
 
-  // Auto-scroll handling
   useEffect(() => {
     if (isAtBottom && !scrollLockRef.current) {
       scrollToBottom('auto')
     }
   }, [messages, isAtBottom, scrollToBottom])
 
-  
-  // Di dalam komponen ChatInterface
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!input.trim() || streamingRef.current) return
-
-  setIsLoading(true)
-  streamingRef.current = true
-  
-  const userMessage: Message = {
-    role: "user",
-    content: input,
-    id: Date.now().toString()
-  }
-  
-  const newMessages = [...messages, userMessage]
-  setMessages(newMessages)
-  setInput("")
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ 
-        messages: [userMessage], // Hanya kirim pesan terakhir
-        chatId: currentChatId
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+  const stopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
     }
-
-    const reader = response.body?.getReader()
-    if (!reader) throw new Error("No reader available")
-
-    let fullContent = ""
-    const assistantMessageId = `assistant-${Date.now()}`
-    
-    setMessages(prev => [...prev, { 
-      role: "assistant", 
-      content: "", 
-      id: assistantMessageId 
-    }])
-
-    const decoder = new TextDecoder()
-    
-    while (streamingRef.current) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      const chunk = decoder.decode(value, { stream: true })
-      fullContent += chunk
-      
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessageId 
-          ? { ...msg, content: fullContent } 
-          : msg
-      ))
-    }
-  } catch (error) {
-    console.error("Error:", error)
-    setMessages(prev => [...prev, {
-      role: "assistant",
-      content: "Sorry, I encountered an error. Please try again.",
-      id: `error-${Date.now()}`
-    }])
-  } finally {
     streamingRef.current = false
     setIsLoading(false)
   }
-}
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || streamingRef.current) return
+
+    setIsLoading(true)
+    streamingRef.current = true
+    
+    abortControllerRef.current = new AbortController()
+    
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+      id: Date.now().toString()
+    }
+    
+    setMessages(prev => [...prev, userMessage])
+    setInput("")
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          messages: [userMessage],
+          chatId: currentChatId
+        }),
+        signal: abortControllerRef.current.signal
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error("No reader available")
+
+      let fullContent = ""
+      const assistantMessageId = `assistant-${Date.now()}`
+      
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "", 
+        id: assistantMessageId 
+      }])
+
+      const decoder = new TextDecoder()
+      
+      console.log('🚀 Starting real-time streaming...')
+      
+      while (streamingRef.current) {
+        try {
+          const { done, value } = await reader.read()
+          if (done) {
+            console.log('✅ Stream completed')
+            break
+          }
+
+          const chunk = decoder.decode(value, { stream: true })
+          fullContent += chunk
+          
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: fullContent } 
+              : msg
+          ))
+          
+          if (isAtBottom && !scrollLockRef.current) {
+            scrollToBottom('auto')
+          }
+          
+        } catch (readError) {
+          if (readError instanceof Error && readError.name === 'AbortError') {
+            console.log('🛑 Stream aborted by user')
+            break
+          }
+          throw readError
+        }
+      }
+
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('🛑 Request aborted')
+        toast({
+          title: "Stream stopped",
+          description: "Message generation was stopped.",
+        })
+      } else {
+        console.error("❌ Chat Error:", error)
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "Sorry, I encountered an error. Please try again.",
+          id: `error-${Date.now()}`
+        }])
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        })
+      }
+    } finally {
+      streamingRef.current = false
+      setIsLoading(false)
+      abortControllerRef.current = null
+    }
+  }
 
   const handleSendToolResults = async (content: string) => {
     setIsToolModalOpen(false);
     
-    // Create a new user message with the tool results
     const toolMessage: Message = {
       role: "user",
       content: `Here are the results from the penetration testing tool. Please analyze these results and provide insights on potential vulnerabilities and next steps:\n\n${content}`,
       id: `tool-${Date.now()}`
     };
 
-    // Add the tool message to chat
     setMessages(prev => [...prev, toolMessage]);
     
-    // Process the tool results through the LLM
     setIsLoading(true);
     streamingRef.current = true;
+    abortControllerRef.current = new AbortController()
 
     try {
       const response = await fetch("/api/chat", {
@@ -303,7 +332,8 @@ const handleSubmit = async (e: React.FormEvent) => {
         body: JSON.stringify({ 
           messages: [toolMessage],
           chatId: currentChatId
-        })
+        }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
@@ -325,44 +355,56 @@ const handleSubmit = async (e: React.FormEvent) => {
       const decoder = new TextDecoder();
       
       while (streamingRef.current) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        try {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        fullContent += chunk;
-        
-        setMessages(prev => prev.map(msg => 
-          msg.id === assistantMessageId 
-            ? { ...msg, content: fullContent } 
-            : msg
-        ));
+          const chunk = decoder.decode(value, { stream: true });
+          fullContent += chunk;
+          
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: fullContent } 
+              : msg
+          ));
+          
+          if (isAtBottom && !scrollLockRef.current) {
+            scrollToBottom('auto')
+          }
+        } catch (readError) {
+          if (readError instanceof Error && readError.name === 'AbortError') {
+            break
+          }
+          throw readError
+        }
       }
 
-      // Save the conversation to database
       toast({
-        title: "Tool results sent",
-        description: "AI is analyzing the results...",
+        title: "Tool results analyzed",
+        description: "AI has completed analysis of the tool results.",
       });
     } catch (error) {
-      console.error("Error:", error);
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Sorry, I encountered an error processing the tool results. Please try again.",
-        id: `error-${Date.now()}`
-      }]);
-      toast({
-        title: "Error",
-        description: "Failed to process tool results",
-        variant: "destructive",
-      });
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error("Error:", error);
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "Sorry, I encountered an error processing the tool results. Please try again.",
+          id: `error-${Date.now()}`
+        }]);
+        toast({
+          title: "Error",
+          description: "Failed to process tool results",
+          variant: "destructive",
+        });
+      }
     } finally {
       streamingRef.current = false;
       setIsLoading(false);
+      abortControllerRef.current = null
     }
   };
 
-  const { data: session } = useSession()
-   return (
+  return (
     <div className="flex flex-1 flex-col overflow-hidden h-full">
       <div className="flex flex-1 overflow-hidden">
         <div className="flex flex-1 flex-col overflow-hidden">
@@ -371,10 +413,21 @@ const handleSubmit = async (e: React.FormEvent) => {
               <div className="flex h-8 w-8 items-center justify-center rounded-full gradient-bg">
                 <Logo className="h-7 w-7 text-white" />
               </div>
-               <h2 className="text-lg font-bold gradient-text">
-      Hi, {session?.user?.name || 'User'} !
-    </h2>
+              <h2 className="text-lg font-bold gradient-text">
+                Hi, {session?.user?.name || 'User'} !
+              </h2>
             </div>
+            
+            {isLoading && streamingRef.current && (
+              <Button
+                onClick={stopStreaming}
+                variant="outline"
+                size="sm"
+                className="border-red-500 text-red-500 hover:bg-red-500/10"
+              >
+                Stop Generation
+              </Button>
+            )}
           </div>
 
           <div 
@@ -410,7 +463,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                       )}
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium">
+                      <div className="font-medium flex items-center gap-2">
                         {message.role === "user" ? "You" : "PentestAI"}
                       </div>
                       <div className="mt-1 text-sm">

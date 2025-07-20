@@ -7,13 +7,10 @@ import { ConversationChain } from 'langchain/chains'
 import { BufferMemory } from 'langchain/memory'
 import { ChatMessageHistory } from 'langchain/stores/message/in_memory'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
-import { streamText } from 'ai'
-import { ollama} from 'ollama-ai-provider'
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   const { messages, chatId } = await req.json()
-  
 
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -68,97 +65,113 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Inisialisasi model Ollama
-    const model = ollama(process.env.OLLAMA_MODEL || 'pentest-ai')
+    console.log('🔗 Connecting to Ollama at:', process.env.OLLAMA_HOST)
 
-    // Buat memory dari riwayat percakapan
-    const messageHistory = new ChatMessageHistory()
+    // Buat array pesan untuk Ollama
+    const allMessages: any[] = []
     
-    // Tambahkan pesan sebelumnya ke memory
+    // Tambahkan pesan sebelumnya
     for (const msg of previousMessages) {
       if (msg.type === 'human') {
-        await messageHistory.addMessage(new HumanMessage(msg.data.content))
+        allMessages.push(new HumanMessage(msg.data.content))
       } else {
-        await messageHistory.addMessage(new AIMessage(msg.data.content))
+        allMessages.push(new AIMessage(msg.data.content))
       }
     }
+    
+    // Tambahkan pesan user baru
+    allMessages.push(new HumanMessage(userMessage.content))
 
-    // Tambahkan pesan baru ke memory
-    await messageHistory.addMessage(new HumanMessage(userMessage.content))
-
-    // Buat memory buffer
-    const memory = new BufferMemory({
-      chatHistory: messageHistory,
-      returnMessages: true,
-      memoryKey: "history"
+    // Buat ChatOllama instance
+    const llm = new ChatOllama({
+      baseUrl: process.env.OLLAMA_HOST || 'http://localhost:11434',
+      model: process.env.OLLAMA_MODEL || 'pentest-ai',
+      temperature: 0.7,
+      // Enable streaming
+      disableStreaming: false,
     })
 
-    // Buat conversation chain
-    const chain = new ConversationChain({
-      llm: new ChatOllama({
-        baseUrl: process.env.OLLAMA_HOST || 'http://localhost:11434',
-        model: process.env.OLLAMA_MODEL || 'pentest-ai',
-      }),
-      memory: memory
-    })
-
-    // Gabungkan pesan untuk dikirim ke model
-    const allMessages = [
-      ...(await memory.chatHistory.getMessages()),
-      new HumanMessage(userMessage.content)
-    ]
-
-    // Gunakan streamText dari ai package
-    const { textStream } = await streamText({
-      model,
-      messages: allMessages.map(msg => ({
-        role: msg._getType() === 'human' ? 'user' : 'assistant',
-        content: typeof msg.content === 'string' ? msg.content : String(msg.content)
-      })),
-    })
-
+    console.log('💬 Starting real-time stream from Ollama...')
+    
+    // Buat real-time streaming response
+    const encoder = new TextEncoder()
     let fullResponse = ''
+    
     const readableStream = new ReadableStream({
       async start(controller) {
-        const encoder = new TextEncoder()
-        for await (const chunk of textStream) {
-          fullResponse += chunk
-          controller.enqueue(encoder.encode(chunk))
-        }
-
-        // Simpan response AI ke database setelah stream selesai
-        await prisma.message.create({
-          data: {
-            chatId: chat.id,
-            content: fullResponse,
-            role: 'ASSISTANT'
-          }
-        })
-
-        // Update judul chat jika ini adalah pesan pertama
-        if (messages.length <= 2) {
-          await prisma.chat.update({
-            where: { id: chat.id },
-            data: {
-              title: userMessage.content.substring(0, 50)
+        try {
+          // Stream dari LLM langsung
+          const stream = await llm.stream(allMessages)
+          
+          for await (const chunk of stream) {
+            const content = chunk.content
+            
+            if (content) {
+              const contentStr = typeof content === 'string' ? content : JSON.stringify(content)
+              fullResponse += contentStr
+              
+              // Kirim chunk secara real-time
+              controller.enqueue(encoder.encode(contentStr))
             }
-          })
-        }
+          }
 
-        controller.close()
+          console.log('✅ Streaming completed')
+
+          // Simpan response AI ke database setelah streaming selesai
+          if (fullResponse) {
+            await prisma.message.create({
+              data: {
+                chatId: chat.id,
+                content: fullResponse,
+                role: 'ASSISTANT'
+              }
+            })
+
+            // Update judul chat jika ini adalah pesan pertama
+            if (previousMessages.length === 0) {
+              await prisma.chat.update({
+                where: { id: chat.id },
+                data: {
+                  title: userMessage.content.substring(0, 50)
+                }
+              })
+            }
+          }
+
+          controller.close()
+        } catch (error) {
+          console.error('❌ Streaming error:', error)
+          controller.error(error)
+        }
       }
     })
 
     return new Response(readableStream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Transfer-Encoding': 'chunked',
       },
     })
+
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    )
+    console.error('❌ Chat Error:', error)
+    
+    // Enhanced error handling
+    let errorMessage = 'Internal Server Error'
+    if (error instanceof Error) {
+      if (error.message.includes('fetch failed') || error.message.includes('ENOTFOUND')) {
+        errorMessage = `Cannot connect to Ollama at ${process.env.OLLAMA_HOST}`
+      } else {
+        errorMessage = error.message
+      }
+    }
+    
+    return NextResponse.json({
+      error: errorMessage,
+      ollamaHost: process.env.OLLAMA_HOST,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
