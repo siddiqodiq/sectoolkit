@@ -601,12 +601,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
                     <div className="flex-1">
                       <div className="font-medium flex items-center gap-2">
                         {message.role === "user" ? "You" : "PentestAI"}
-                        {message.role === "assistant" && useKnowledgeBase && (
-                          <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 rounded-full">
-                            <Brain className="h-3 w-3 text-blue-400" />
-                            <span className="text-xs text-blue-300">KB</span>
-                          </div>
-                        )}
+                        {message.role === "assistant"}
                       </div>
                       <div className="mt-1 text-sm">
                         <MessageContent content={message.content} />
