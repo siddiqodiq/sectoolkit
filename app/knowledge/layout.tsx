@@ -1,4 +1,4 @@
-// app/tools/layout.tsx
+// app/knowledge/layout.tsx - Update untuk match tools layout
 
 import { RouteGuard } from '@/components/route-guard'
 import { SidebarProvider } from '@/components/ui/sidebar'
@@ -6,8 +6,8 @@ import type { Metadata } from "next"
 import "../../app/globals.css"
 
 export const metadata: Metadata = {
-  title: "Pentesting Tools",
-  description: "Collection of security tools for penetration testing and vulnerability assessment",
+  title: "Knowledge Base Management",
+  description: "Upload, ingest, and manage your knowledge base files for enhanced AI responses",
   icons: {
     icon: "logo.ico",
     shortcut: "logo.ico",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function ToolsLayout({
+export default function KnowledgeLayout({
   children,
 }: {
   children: React.ReactNode

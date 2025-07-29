@@ -9,7 +9,7 @@ import { deleteDocumentFromChroma } from '@/app/api/chat/utils/chroma'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // ✅ Fix async params
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -17,6 +17,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // ✅ Await params
+    const params = await context.params
     const { id } = params
 
     // Find the file
@@ -36,6 +38,22 @@ export async function DELETE(
       await unlink(file.filePath)
     } catch (error) {
       console.error('Error deleting physical file:', error)
+    }
+
+    // Delete extracted text file if exists
+    try {
+      const extractedFilePath = file.filePath.replace(/\.[^/.]+$/, '.extracted.txt')
+      await unlink(extractedFilePath)
+    } catch (error) {
+      // Ignore if extracted file doesn't exist
+    }
+
+    // Delete metadata file if exists
+    try {
+      const metadataPath = file.filePath.replace(/\.[^/.]+$/, '.metadata.json')
+      await unlink(metadataPath)
+    } catch (error) {
+      // Ignore if metadata file doesn't exist
     }
 
     // Delete from ChromaDB
@@ -60,7 +78,7 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> } // ✅ Fix async params
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -68,17 +86,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // ✅ Await params
+    const params = await context.params
     const { id } = params
 
-    // Handle application knowledge base files
-    if (id.startsWith('app-')) {
-      const mockContent = getMockApplicationContent(id)
-      return new Response(mockContent, {
-        headers: { 'Content-Type': 'text/plain' }
-      })
-    }
-
-    // Handle user files
+    // ✅ Remove application knowledge base handling - only handle user files
     const file = await prisma.knowledge.findFirst({
       where: {
         id: id,
@@ -90,12 +102,33 @@ export async function GET(
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
-    // Read file content
-    const fs = await import('fs/promises')
-    const content = await fs.readFile(file.filePath, 'utf-8')
+    // ✅ Try to read extracted text first, fallback to original file
+    const { readFile } = await import('fs/promises')
+    let content: string
+    
+    try {
+      // Try extracted text file first
+      const extractedFilePath = file.filePath.replace(/\.[^/.]+$/, '.extracted.txt')
+      content = await readFile(extractedFilePath, 'utf-8')
+      console.log(`📄 Reading extracted text for: ${file.name}`)
+    } catch (extractedError) {
+      try {
+        // Fallback to original file
+        console.log(`📄 Reading original file for: ${file.name}`)
+        content = await readFile(file.filePath, 'utf-8')
+      } catch (originalError) {
+        console.error('Error reading both extracted and original file:', originalError)
+        return NextResponse.json({ 
+          error: 'Could not read file content' 
+        }, { status: 500 })
+      }
+    }
 
     return new Response(content, {
-      headers: { 'Content-Type': 'text/plain' }
+      headers: { 
+        'Content-Type': 'text/plain',
+        'Cache-Control': 'no-cache'
+      }
     })
   } catch (error) {
     console.error('Error getting file content:', error)
@@ -103,62 +136,80 @@ export async function GET(
   }
 }
 
-function getMockApplicationContent(id: string): string {
-  switch (id) {
-    case 'app-1':
-      return `OWASP Top 10 Security Risks
+// ✅ Add content endpoint for better file handling
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
-1. Injection
-SQL injection, NoSQL injection, OS injection, and LDAP injection flaws occur when untrusted data is sent to an interpreter as part of a command or query.
+    const params = await context.params
+    const { id } = params
+    const { action } = await request.json()
 
-2. Broken Authentication
-Application functions related to authentication and session management are often implemented incorrectly, allowing attackers to compromise passwords, keys, or session tokens.
+    const file = await prisma.knowledge.findFirst({
+      where: {
+        id: id,
+        userId: session.user.id
+      }
+    })
 
-3. Sensitive Data Exposure
-Many web applications and APIs do not properly protect sensitive data, such as financial, healthcare, and PII.
+    if (!file) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+    }
 
-4. XML External Entities (XXE)
-Poorly configured XML processors evaluate external entity references within XML documents.
+    switch (action) {
+      case 'reprocess':
+        // Trigger reprocessing of the file
+        // This could be useful if extraction failed initially
+        return NextResponse.json({ 
+          message: 'File reprocessing triggered',
+          status: 'processing'
+        })
 
-5. Broken Access Control
-Restrictions on what authenticated users are allowed to do are often not properly enforced.
+      case 'get-metadata':
+        // Get file metadata including extraction info
+        const { readFile } = await import('fs/promises')
+        let metadata = {
+          id: file.id,
+          name: file.name,
+          size: file.size,
+          mimeType: file.mimeType,
+          status: file.status,
+          chunks: file.chunks,
+          ingested: file.ingested,
+          uploadedAt: file.uploadedAt,
+          hasExtractedText: false,
+          hasMetadata: false
+        }
 
-[... continued content ...]`
+        // Check if extracted text exists
+        try {
+          const extractedFilePath = file.filePath.replace(/\.[^/.]+$/, '.extracted.txt')
+          await readFile(extractedFilePath, 'utf-8')
+          metadata.hasExtractedText = true
+        } catch {}
 
-    case 'app-2':
-      return `Penetration Testing Methodologies
+        // Check if metadata file exists
+        try {
+          const metadataPath = file.filePath.replace(/\.[^/.]+$/, '.metadata.json')
+          const metadataContent = await readFile(metadataPath, 'utf-8')
+          const parsedMetadata = JSON.parse(metadataContent)
+          metadata.hasMetadata = true
+          metadata = { ...metadata, ...parsedMetadata }
+        } catch {}
 
-OWASP Testing Guide
-The OWASP Testing Guide provides a comprehensive methodology for testing web application security.
+        return NextResponse.json(metadata)
 
-NIST SP 800-115
-Technical Guide to Information Security Testing and Assessment
-
-PTES (Penetration Testing Execution Standard)
-Pre-engagement Interactions
-Intelligence Gathering
-Threat Modeling
-Vulnerability Analysis
-Exploitation
-Post Exploitation
-Reporting
-
-[... continued content ...]`
-
-    case 'app-3':
-      return `Common Vulnerabilities Database
-
-CVE-2023-XXXX: Remote Code Execution in Apache Struts
-CVSS Score: 9.8 (Critical)
-Description: Critical vulnerability allowing remote code execution...
-
-CVE-2023-YYYY: SQL Injection in Popular CMS
-CVSS Score: 8.5 (High)  
-Description: SQL injection vulnerability in user authentication...
-
-[... continued content ...]`
-
-    default:
-      return 'Content not found'
+      default:
+        return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+    }
+  } catch (error) {
+    console.error('Error handling file action:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

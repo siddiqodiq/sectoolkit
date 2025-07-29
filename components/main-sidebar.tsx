@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Shield, Database, Settings, LogOut, User, Bell, Moon, HelpCircle, Plus, MoreVertical, Loader2, Boxes, Brain } from "lucide-react"
+import { Shield, Database, Settings, LogOut, User, Bell, Moon, HelpCircle, Plus, MoreVertical, Loader2, Boxes, Brain, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -30,6 +30,37 @@ import { Logo } from "./ui/logo"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { toast } from "./ui/use-toast"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+
+const navigationItems = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: Shield,
+    badge: null
+  },
+  {
+    title: "Chat",
+    href: "/dashboard",
+    icon: MessageSquare,
+    badge: null
+  },
+  {
+    title: "Knowledge Base",
+    href: "/knowledge",
+    icon: Database,
+    badge: null
+  },
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
+    badge: null
+  }
+]
 
 export function MainSidebar() {
   const [chatHistory, setChatHistory] = useState<any[]>([])
@@ -38,6 +69,7 @@ export function MainSidebar() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false) 
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   // Fungsi untuk mendapatkan active item berdasarkan pathname
   const getActiveItem = () => {

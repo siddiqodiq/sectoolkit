@@ -1,4 +1,4 @@
-// app/knowledge/page.tsx - Update dengan tombol ingest
+// app/knowledge/page.tsx - Update layout sesuai tools page
 "use client"
 
 import { useState, useEffect } from "react"
@@ -10,17 +10,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/components/ui/use-toast"
-import { ArrowLeft, Upload, Trash2, FileText, Database, Brain, Plus, Eye, Download, Zap, RefreshCw, CheckCircle } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Upload, Trash2, FileText, Brain, Plus, Eye, Zap, RefreshCw, CheckCircle, Menu } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { MainSidebar } from "@/components/main-sidebar"
+import { SidebarInset } from "@/components/ui/sidebar"
 
 interface KnowledgeFile {
   id: string
   name: string
   size: number
-  type: 'application' | 'user'
+  type: 'user'
   uploadedAt: string
   status: 'active' | 'processing' | 'error' | 'ingested'
   chunks?: number
@@ -38,7 +39,6 @@ export default function KnowledgeBasePage() {
   const [fileContent, setFileContent] = useState<string>("")
   const [ingestStatus, setIngestStatus] = useState<string>("")
   const { toast } = useToast()
-  const router = useRouter()
 
   useEffect(() => {
     loadKnowledgeFiles()
@@ -48,7 +48,8 @@ export default function KnowledgeBasePage() {
     try {
       const response = await fetch('/api/knowledge/files')
       const data = await response.json()
-      setFiles(data.files || [])
+      const userFiles = (data.files || []).filter((f: KnowledgeFile) => f.type === 'user')
+      setFiles(userFiles)
     } catch (error) {
       console.error('Failed to load knowledge files:', error)
       toast({
@@ -62,7 +63,6 @@ export default function KnowledgeBasePage() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      // Validate file type
       const allowedTypes = ['text/plain', 'application/pdf', 'text/markdown']
       if (!allowedTypes.includes(file.type)) {
         toast({
@@ -73,7 +73,6 @@ export default function KnowledgeBasePage() {
         return
       }
       
-      // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -106,8 +105,6 @@ export default function KnowledgeBasePage() {
         throw new Error('Upload failed')
       }
 
-      const data = await response.json()
-      
       toast({
         title: "Upload successful",
         description: `${selectedFile.name} has been added to knowledge base`,
@@ -116,7 +113,6 @@ export default function KnowledgeBasePage() {
       setSelectedFile(null)
       loadKnowledgeFiles()
       
-      // Reset file input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement
       if (fileInput) fileInput.value = ''
 
@@ -177,8 +173,7 @@ export default function KnowledgeBasePage() {
   }
 
   const handleIngestToDatabase = async () => {
-    // Filter files yang siap untuk di-ingest (status active dan belum di-ingest)
-    const readyFiles = files.filter(f => f.type === 'user' && f.status === 'active' && !f.ingested)
+    const readyFiles = files.filter(f => f.status === 'active' && !f.ingested)
     
     if (readyFiles.length === 0) {
       toast({
@@ -209,7 +204,6 @@ export default function KnowledgeBasePage() {
         throw new Error(error.message || 'Ingestion failed')
       }
 
-      // Stream the ingestion progress
       const reader = response.body?.getReader()
       if (!reader) throw new Error('No response stream available')
 
@@ -242,7 +236,7 @@ export default function KnowledgeBasePage() {
                   title: "Ingestion complete",
                   description: `${readyFiles.length} files have been ingested into knowledge base`,
                 })
-                loadKnowledgeFiles() // Reload files to update status
+                loadKnowledgeFiles()
                 break
               }
             } catch (parseError) {
@@ -282,323 +276,288 @@ export default function KnowledgeBasePage() {
     }
   }
 
-  const applicationFiles = files.filter(f => f.type === 'application')
-  const userFiles = files.filter(f => f.type === 'user')
-  const readyToIngestFiles = userFiles.filter(f => f.status === 'active' && !f.ingested)
-  const ingestedFiles = userFiles.filter(f => f.ingested)
+  const readyToIngestFiles = files.filter(f => f.status === 'active' && !f.ingested)
+  const ingestedFiles = files.filter(f => f.ingested)
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-background">
-      <div className="max-w-7xl mx-auto w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              onClick={() => router.push("/dashboard")}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Dashboard
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold gradient-text">Knowledge Base Management</h1>
-              <p className="text-muted-foreground mt-1">
-                Upload, ingest, and manage your knowledge base files
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {/* Ingest Button */}
+    // ✅ Update layout structure to match tools page
+    <div className="flex h-screen w-full overflow-hidden bg-[#212121]">
+      <MainSidebar />
+      <SidebarInset className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden relative">
+          {/* Mobile menu button */}
+          <div className="md:hidden fixed top-4 left-4 z-40">
             <Button
-              onClick={handleIngestToDatabase}
-              disabled={isIngesting || readyToIngestFiles.length === 0}
-              className="gradient-btn flex items-center gap-2"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-full bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:bg-gray-700"
+              onClick={() => document.dispatchEvent(new CustomEvent('toggle-left-sidebar'))}
             >
-              {isIngesting ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Ingesting...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4" />
-                  Ingest to DB ({readyToIngestFiles.length})
-                </>
-              )}
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle Menu</span>
             </Button>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Brain className="h-4 w-4" />
-              <span>{files.length} files total</span>
+          </div>
+
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <div className="border-b border-gray-800 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold gradient-text">Knowledge Base Management</h1>
+                  <p className="text-gray-400 mt-1">
+                    Upload, ingest, and manage your knowledge base files
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  {/* Ingest Button */}
+                  <Button
+                    onClick={handleIngestToDatabase}
+                    disabled={isIngesting || readyToIngestFiles.length === 0}
+                    className="gradient-btn flex items-center gap-2"
+                  >
+                    {isIngesting ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Ingesting...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4" />
+                        Ingest to DB ({readyToIngestFiles.length})
+                      </>
+                    )}
+                  </Button>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Brain className="h-4 w-4" />
+                    <span>{files.length} files total</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content area with proper overflow */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4">
+                {/* Ingestion Progress */}
+                {isIngesting && (
+                  <Card className="mb-6 border-blue-500/20 bg-blue-500/5">
+                    <CardContent className="pt-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                          <span className="font-medium">Ingesting Knowledge Base</span>
+                        </div>
+                        <Progress value={ingestProgress} className="w-full" />
+                        <p className="text-sm text-gray-400">{ingestStatus}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Status Alert */}
+                {ingestedFiles.length > 0 && (
+                  <Alert className="mb-6 border-green-500/20 bg-green-500/5">
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <AlertDescription className="text-green-300">
+                      {ingestedFiles.length} files have been ingested and are available for knowledge base queries.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* ✅ Tabs with consistent styling */}
+                <Tabs defaultValue="upload" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 bg-gray-800/50">
+                    <TabsTrigger 
+                      value="upload" 
+                      className="flex items-center gap-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Upload Files
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="manage" 
+                      className="flex items-center gap-2 data-[state=active]:bg-gray-700 data-[state=active]:text-white"
+                    >
+                      <FileText className="h-4 w-4" />
+                      My Files ({files.length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* Upload Tab */}
+                  <TabsContent value="upload" className="mt-6">
+                    <Card className="bg-gray-800/50 border-gray-700">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-gray-200">
+                          <Plus className="h-5 w-5" />
+                          Add New Knowledge
+                        </CardTitle>
+                        <CardDescription className="text-gray-400">
+                          Upload documents to enhance AI responses with domain-specific knowledge
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="file-upload" className="text-gray-300">Select File</Label>
+                            <Input
+                              id="file-upload"
+                              type="file"
+                              accept=".txt,.pdf,.md"
+                              onChange={handleFileSelect}
+                              className="mt-1 bg-gray-700/50 border-gray-600 text-gray-200"
+                            />
+                            <p className="text-xs text-gray-400 mt-1">
+                              Supported formats: .txt, .pdf, .md (max 10MB)
+                            </p>
+                          </div>
+
+                          {selectedFile && (
+                            <Card className="p-4 bg-gray-700/50 border-gray-600">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <FileText className="h-8 w-8 text-blue-400" />
+                                  <div>
+                                    <p className="font-medium text-gray-200">{selectedFile.name}</p>
+                                    <p className="text-sm text-gray-400">
+                                      {formatFileSize(selectedFile.size)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button 
+                                  onClick={handleUpload}
+                                  disabled={isLoading}
+                                  className="gradient-btn"
+                                >
+                                  {isLoading ? 'Uploading...' : 'Upload'}
+                                </Button>
+                              </div>
+                              {isLoading && (
+                                <Progress value={uploadProgress} className="mt-3" />
+                              )}
+                            </Card>
+                          )}
+                        </div>
+
+                        <div className="p-4 border border-dashed border-gray-600 rounded-lg text-center">
+                          <Brain className="h-12 w-12 text-gray-500 mx-auto mb-3" />
+                          <h3 className="font-medium mb-2 text-gray-200">How it works</h3>
+                          <p className="text-sm text-gray-400 mb-4">
+                            Your uploaded documents will be processed and indexed for semantic search.
+                            The AI will use this knowledge to provide more accurate and contextual responses.
+                          </p>
+                          <div className="grid grid-cols-3 gap-4 text-xs">
+                            <div>
+                              <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-1">
+                                <Upload className="h-4 w-4 text-blue-400" />
+                              </div>
+                              <p className="text-gray-400">Upload</p>
+                            </div>
+                            <div>
+                              <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-1">
+                                <Brain className="h-4 w-4 text-yellow-400" />
+                              </div>
+                              <p className="text-gray-400">Process</p>
+                            </div>
+                            <div>
+                              <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-1">
+                                <Zap className="h-4 w-4 text-green-400" />
+                              </div>
+                              <p className="text-gray-400">Ingest</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  {/* Manage Files Tab */}
+                  <TabsContent value="manage" className="mt-6">
+                    <Card className="bg-gray-800/50 border-gray-700">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-gray-200">
+                          <FileText className="h-5 w-5" />
+                          My Knowledge Files
+                        </CardTitle>
+                        <CardDescription className="text-gray-400">
+                          Your uploaded knowledge base files. Click "Ingest to DB" to make them available for AI queries.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid gap-4">
+                          {files.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400">
+                              <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                              <p>No files uploaded yet</p>
+                              <p className="text-sm">Upload your first file to get started</p>
+                            </div>
+                          ) : (
+                            files.map((file) => (
+                              <div key={file.id} className="flex items-center justify-between p-4 border border-gray-700 rounded-lg hover:bg-gray-700/30 transition-colors">
+                                <div className="flex items-center gap-3">
+                                  <FileText className={`h-8 w-8 ${file.ingested ? 'text-green-400' : 'text-blue-400'}`} />
+                                  <div>
+                                    <p className="font-medium text-gray-200">{file.name}</p>
+                                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                                      <span>{formatFileSize(file.size)}</span>
+                                      <span>•</span>
+                                      <span>Uploaded {new Date(file.uploadedAt).toLocaleDateString()}</span>
+                                      <Badge className={getStatusColor(file.status)}>
+                                        {file.status}
+                                      </Badge>
+                                      {file.ingested && (
+                                        <Badge className="bg-green-500/20 text-green-400">
+                                          Ingested
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePreview(file)}
+                                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDelete(file.id, file.name)}
+                                    className="border-gray-600 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Ingestion Progress */}
-        {isIngesting && (
-          <Card className="mb-6 border-blue-500/20 bg-blue-500/5">
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
-                  <span className="font-medium">Ingesting Knowledge Base</span>
-                </div>
-                <Progress value={ingestProgress} className="w-full" />
-                <p className="text-sm text-muted-foreground">{ingestStatus}</p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Status Alert */}
-        {ingestedFiles.length > 0 && (
-          <Alert className="mb-6 border-green-500/20 bg-green-500/5">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-700">
-              {ingestedFiles.length} files have been ingested and are available for knowledge base queries.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="upload" className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Upload Files
-            </TabsTrigger>
-            <TabsTrigger value="application" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              Application KB ({applicationFiles.length})
-            </TabsTrigger>
-            <TabsTrigger value="user" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              My Files ({userFiles.length})
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Upload Tab */}
-          <TabsContent value="upload" className="mt-6">
-            <Card className="glass-effect">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  Add New Knowledge
-                </CardTitle>
-                <CardDescription>
-                  Upload documents to enhance AI responses with domain-specific knowledge
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="file-upload">Select File</Label>
-                    <Input
-                      id="file-upload"
-                      type="file"
-                      accept=".txt,.pdf,.md"
-                      onChange={handleFileSelect}
-                      className="mt-1"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Supported formats: .txt, .pdf, .md (max 10MB)
-                    </p>
-                  </div>
-
-                  {selectedFile && (
-                    <Card className="p-4 bg-muted/50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-8 w-8 text-blue-500" />
-                          <div>
-                            <p className="font-medium">{selectedFile.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatFileSize(selectedFile.size)}
-                            </p>
-                          </div>
-                        </div>
-                        <Button 
-                          onClick={handleUpload}
-                          disabled={isLoading}
-                          className="gradient-btn"
-                        >
-                          {isLoading ? 'Uploading...' : 'Upload'}
-                        </Button>
-                      </div>
-                      {isLoading && (
-                        <Progress value={uploadProgress} className="mt-3" />
-                      )}
-                    </Card>
-                  )}
-                </div>
-
-                <div className="p-4 border border-dashed border-muted-foreground/25 rounded-lg text-center">
-                  <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="font-medium mb-2">How it works</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Your uploaded documents will be processed and indexed for semantic search.
-                    The AI will use this knowledge to provide more accurate and contextual responses.
-                  </p>
-                  <div className="grid grid-cols-3 gap-4 text-xs">
-                    <div>
-                      <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-1">
-                        <Upload className="h-4 w-4 text-blue-400" />
-                      </div>
-                      <p>Upload</p>
-                    </div>
-                    <div>
-                      <div className="w-8 h-8 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-1">
-                        <Brain className="h-4 w-4 text-yellow-400" />
-                      </div>
-                      <p>Process</p>
-                    </div>
-                    <div>
-                      <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-1">
-                        <Database className="h-4 w-4 text-green-400" />
-                      </div>
-                      <p>Index</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Application Knowledge Base Tab */}
-          <TabsContent value="application" className="mt-6">
-            <Card className="glass-effect">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Application Knowledge Base
-                </CardTitle>
-                <CardDescription>
-                  Pre-built knowledge base for penetration testing and cybersecurity
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4">
-                  {applicationFiles.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Database className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No application knowledge base files found</p>
-                    </div>
-                  ) : (
-                    applicationFiles.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-8 w-8 text-blue-500" />
-                          <div>
-                            <p className="font-medium">{file.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>{formatFileSize(file.size)}</span>
-                              <span>•</span>
-                              <span>{file.chunks} chunks</span>
-                              <Badge className={getStatusColor(file.status)}>
-                                {file.status}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePreview(file)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* User Files Tab */}
-          <TabsContent value="user" className="mt-6">
-            <Card className="glass-effect">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  My Knowledge Files
-                </CardTitle>
-                <CardDescription>
-                  Your uploaded knowledge base files. Click "Ingest to DB" to make them available for AI queries.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4">
-                  {userFiles.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No user files uploaded yet</p>
-                      <p className="text-sm">Upload your first file to get started</p>
-                    </div>
-                  ) : (
-                    userFiles.map((file) => (
-                      <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <FileText className={`h-8 w-8 ${file.ingested ? 'text-green-500' : 'text-blue-500'}`} />
-                          <div>
-                            <p className="font-medium">{file.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <span>{formatFileSize(file.size)}</span>
-                              <span>•</span>
-                              <span>Uploaded {new Date(file.uploadedAt).toLocaleDateString()}</span>
-                              <Badge className={getStatusColor(file.status)}>
-                                {file.status}
-                              </Badge>
-                              {file.ingested && (
-                                <Badge className="bg-green-500/20 text-green-400">
-                                  Ingested
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePreview(file)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(file.id, file.name)}
-                            className="text-red-500 hover:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )))
-                  }
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+      </SidebarInset>
 
       {/* Preview Dialog */}
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl max-h-[80vh] bg-gray-800 border-gray-700">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-gray-200">
               <FileText className="h-5 w-5" />
               {previewFile?.name}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-gray-400">
               File preview - {previewFile && formatFileSize(previewFile.size)}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh] w-full rounded border p-4">
-            <pre className="whitespace-pre-wrap text-sm">{fileContent}</pre>
+          <ScrollArea className="max-h-[60vh] w-full rounded border border-gray-600 p-4 bg-gray-900/50">
+            <pre className="whitespace-pre-wrap text-sm text-gray-300">{fileContent}</pre>
           </ScrollArea>
         </DialogContent>
       </Dialog>
