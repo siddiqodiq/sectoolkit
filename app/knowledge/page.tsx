@@ -1,4 +1,4 @@
-// app/knowledge/page.tsx
+// app/knowledge/page.tsx - Update dengan tombol ingest
 "use client"
 
 import { useState, useEffect } from "react"
@@ -10,10 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/components/ui/use-toast"
-import { ArrowLeft, Upload, Trash2, FileText, Database, Brain, Plus, Eye, Download } from "lucide-react"
+import { ArrowLeft, Upload, Trash2, FileText, Database, Brain, Plus, Eye, Download, Zap, RefreshCw, CheckCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface KnowledgeFile {
   id: string
@@ -21,17 +22,21 @@ interface KnowledgeFile {
   size: number
   type: 'application' | 'user'
   uploadedAt: string
-  status: 'active' | 'processing' | 'error'
+  status: 'active' | 'processing' | 'error' | 'ingested'
   chunks?: number
+  ingested?: boolean
 }
 
 export default function KnowledgeBasePage() {
   const [files, setFiles] = useState<KnowledgeFile[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isIngesting, setIsIngesting] = useState(false)
+  const [ingestProgress, setIngestProgress] = useState(0)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewFile, setPreviewFile] = useState<KnowledgeFile | null>(null)
   const [fileContent, setFileContent] = useState<string>("")
+  const [ingestStatus, setIngestStatus] = useState<string>("")
   const { toast } = useToast()
   const router = useRouter()
 
@@ -171,6 +176,95 @@ export default function KnowledgeBasePage() {
     }
   }
 
+  const handleIngestToDatabase = async () => {
+    // Filter files yang siap untuk di-ingest (status active dan belum di-ingest)
+    const readyFiles = files.filter(f => f.type === 'user' && f.status === 'active' && !f.ingested)
+    
+    if (readyFiles.length === 0) {
+      toast({
+        title: "No files to ingest",
+        description: "Upload and activate files first before ingesting",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsIngesting(true)
+    setIngestProgress(0)
+    setIngestStatus("Preparing files for ingestion...")
+
+    try {
+      const response = await fetch('/api/knowledge/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileIds: readyFiles.map(f => f.id)
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Ingestion failed')
+      }
+
+      // Stream the ingestion progress
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No response stream available')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const data = JSON.parse(line)
+              
+              if (data.progress !== undefined) {
+                setIngestProgress(data.progress)
+              }
+              
+              if (data.status) {
+                setIngestStatus(data.status)
+              }
+              
+              if (data.complete) {
+                toast({
+                  title: "Ingestion complete",
+                  description: `${readyFiles.length} files have been ingested into knowledge base`,
+                })
+                loadKnowledgeFiles() // Reload files to update status
+                break
+              }
+            } catch (parseError) {
+              console.error('Failed to parse progress:', parseError)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Ingestion error:', error)
+      toast({
+        title: "Ingestion failed",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      })
+    } finally {
+      setIsIngesting(false)
+      setIngestProgress(0)
+      setIngestStatus("")
+    }
+  }
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
     const k = 1024
@@ -190,6 +284,8 @@ export default function KnowledgeBasePage() {
 
   const applicationFiles = files.filter(f => f.type === 'application')
   const userFiles = files.filter(f => f.type === 'user')
+  const readyToIngestFiles = userFiles.filter(f => f.status === 'active' && !f.ingested)
+  const ingestedFiles = userFiles.filter(f => f.ingested)
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-background">
@@ -208,15 +304,61 @@ export default function KnowledgeBasePage() {
             <div>
               <h1 className="text-3xl font-bold gradient-text">Knowledge Base Management</h1>
               <p className="text-muted-foreground mt-1">
-                Manage your knowledge base files for enhanced AI responses
+                Upload, ingest, and manage your knowledge base files
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Brain className="h-4 w-4" />
-            <span>{files.length} files total</span>
+          <div className="flex items-center gap-4">
+            {/* Ingest Button */}
+            <Button
+              onClick={handleIngestToDatabase}
+              disabled={isIngesting || readyToIngestFiles.length === 0}
+              className="gradient-btn flex items-center gap-2"
+            >
+              {isIngesting ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Ingesting...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" />
+                  Ingest to DB ({readyToIngestFiles.length})
+                </>
+              )}
+            </Button>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Brain className="h-4 w-4" />
+              <span>{files.length} files total</span>
+            </div>
           </div>
         </div>
+
+        {/* Ingestion Progress */}
+        {isIngesting && (
+          <Card className="mb-6 border-blue-500/20 bg-blue-500/5">
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                  <span className="font-medium">Ingesting Knowledge Base</span>
+                </div>
+                <Progress value={ingestProgress} className="w-full" />
+                <p className="text-sm text-muted-foreground">{ingestStatus}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Status Alert */}
+        {ingestedFiles.length > 0 && (
+          <Alert className="mb-6 border-green-500/20 bg-green-500/5">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <AlertDescription className="text-green-700">
+              {ingestedFiles.length} files have been ingested and are available for knowledge base queries.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Tabs defaultValue="upload" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -383,7 +525,7 @@ export default function KnowledgeBasePage() {
                   My Knowledge Files
                 </CardTitle>
                 <CardDescription>
-                  Your uploaded knowledge base files
+                  Your uploaded knowledge base files. Click "Ingest to DB" to make them available for AI queries.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -398,7 +540,7 @@ export default function KnowledgeBasePage() {
                     userFiles.map((file) => (
                       <div key={file.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center gap-3">
-                          <FileText className="h-8 w-8 text-green-500" />
+                          <FileText className={`h-8 w-8 ${file.ingested ? 'text-green-500' : 'text-blue-500'}`} />
                           <div>
                             <p className="font-medium">{file.name}</p>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -408,6 +550,11 @@ export default function KnowledgeBasePage() {
                               <Badge className={getStatusColor(file.status)}>
                                 {file.status}
                               </Badge>
+                              {file.ingested && (
+                                <Badge className="bg-green-500/20 text-green-400">
+                                  Ingested
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -429,8 +576,8 @@ export default function KnowledgeBasePage() {
                           </Button>
                         </div>
                       </div>
-                    ))
-                  )}
+                    )))
+                  }
                 </div>
               </CardContent>
             </Card>

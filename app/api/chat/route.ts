@@ -70,7 +70,12 @@ export async function POST(req: Request) {
       console.log('🔍 Using Knowledge Base mode...')
       
       try {
-        const ragResponse = await getKnowledgeBaseResponse(userMessage.content)
+        // Pass userId to get user-specific knowledge
+        const ragResponse = await getKnowledgeBaseResponse(
+          userMessage.content,
+          [], // chatHistory if needed
+          session.user.id // Pass user ID for filtering
+        )
         const fullResponse = `${ragResponse}`
         
         // Save AI response to database

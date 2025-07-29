@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import prisma from '@/lib/db'
 import { unlink } from 'fs/promises'
+import { deleteDocumentFromChroma } from '@/app/api/chat/utils/chroma'
 
 
 export async function DELETE(
@@ -37,13 +38,18 @@ export async function DELETE(
       console.error('Error deleting physical file:', error)
     }
 
+    // Delete from ChromaDB
+    try {
+      await deleteDocumentFromChroma(file.id)
+    } catch (chromaError) {
+      console.error('Error deleting from ChromaDB:', chromaError)
+      // Continue with database deletion even if ChromaDB fails
+    }
+
     // Delete from database
     await prisma.knowledge.delete({
       where: { id: id }
     })
-
-    // Remove from vector database (ChromaDB)
-    // Add your ChromaDB deletion logic here
 
     return NextResponse.json({ success: true })
   } catch (error) {

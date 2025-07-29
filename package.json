@@ -57,6 +57,7 @@
     "jsonwebtoken": "^9.0.2",
     "langchain": "^0.3.29",
     "lucide-react": "^0.454.0",
+    "mammoth": "^1.9.1",
     "next": "15.2.4",
     "next-auth": "^4.24.11",
     "next-sitemap": "^4.2.3",
@@ -83,6 +84,7 @@
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.176.0",

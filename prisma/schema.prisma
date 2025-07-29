@@ -63,6 +63,7 @@ model Knowledge {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   status     String   @default("processing") // processing, active, error
   chunks     Int?     @default(0)
+  ingested   Boolean  @default(false) // Add this field
   uploadedAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

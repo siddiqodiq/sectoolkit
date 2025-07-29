@@ -10,6 +10,7 @@ import {
   HumanMessagePromptTemplate,
 } from "@langchain/core/prompts";
 import path from "path";
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter'
 
 const CHROMA_DB_PATH = path.join(process.cwd(), "db", "chroma_langchain_db");
 
@@ -364,4 +365,237 @@ export async function ensureChromaDBServer() {
   }
   
   return null;
+}
+
+// ✅ Updated ingestion function using direct ChromaDB
+export async function ingestDocumentToChroma(
+  content: string,
+  metadata: {
+    source: string
+    fileId: string
+    userId: string
+    uploadedAt: string
+  }
+): Promise<number> {
+  try {
+    console.log(`📄 Starting ingestion for: ${metadata.source}`)
+    
+    // Use direct ChromaDB instead of LangChain wrapper
+    const { ChromaClient } = await import('chromadb');
+    
+    const client = new ChromaClient({
+      host: "localhost",
+      port: 8000,
+      ssl: false,
+    });
+
+    // Get or create collection
+    let collection;
+    try {
+      collection = await client.getCollection({ name: "documents" });
+      console.log(`📚 Using existing collection: documents`)
+    } catch (error) {
+      console.log(`📚 Creating new collection: documents`)
+      collection = await client.createCollection({
+        name: "documents",
+        metadata: { "hnsw:space": "cosine" }
+      });
+    }
+
+    // Split document into chunks
+    const textSplitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 200,
+    });
+    
+    const chunks = await textSplitter.splitText(content);
+    console.log(`📑 Split into ${chunks.length} chunks`)
+    
+    if (chunks.length === 0) {
+      throw new Error('No text chunks created from content')
+    }
+
+    // Generate embeddings for all chunks using Ollama
+    console.log(`🔄 Generating embeddings for ${chunks.length} chunks...`)
+    const embeddings = getEmbeddingFunction();
+    
+    const chunkEmbeddings = await Promise.all(
+      chunks.map(async (chunk, index) => {
+        console.log(`📊 Generating embedding for chunk ${index + 1}/${chunks.length}`)
+        return await embeddings.embedQuery(chunk)
+      })
+    );
+
+    console.log(`✅ Generated ${chunkEmbeddings.length} embeddings`)
+
+    // Prepare data for ChromaDB
+    const ids = chunks.map((_, i) => `${metadata.fileId}_chunk_${i}_${Date.now()}`);
+    const metadatas = chunks.map((_, i) => ({
+      source: metadata.source,
+      fileId: metadata.fileId,
+      userId: metadata.userId,
+      uploadedAt: metadata.uploadedAt,
+      chunk_id: i,
+      chunkCount: chunks.length,
+      timestamp: new Date().toISOString()
+    }));
+
+    // Add to ChromaDB in batches to avoid memory issues
+    const batchSize = 10;
+    let totalAdded = 0;
+
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const batchEnd = Math.min(i + batchSize, chunks.length);
+      const batchChunks = chunks.slice(i, batchEnd);
+      const batchEmbeddings = chunkEmbeddings.slice(i, batchEnd);
+      const batchIds = ids.slice(i, batchEnd);
+      const batchMetadatas = metadatas.slice(i, batchEnd);
+
+      console.log(`📦 Adding batch ${Math.floor(i/batchSize) + 1}: chunks ${i + 1}-${batchEnd}`)
+
+      await collection.add({
+        ids: batchIds,
+        embeddings: batchEmbeddings,
+        documents: batchChunks,
+        metadatas: batchMetadatas
+      });
+
+      totalAdded += batchChunks.length;
+      console.log(`✅ Added batch: ${batchChunks.length} chunks`)
+    }
+
+    console.log(`✅ Successfully ingested ${totalAdded} chunks to ChromaDB for ${metadata.source}`)
+    return totalAdded;
+    
+  } catch (error) {
+    console.error('❌ Error ingesting document:', error)
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error name:', error.name)
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+    
+    throw new Error(`Failed to ingest document: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+// ✅ Updated delete function with better error handling
+export async function deleteDocumentFromChroma(fileId: string): Promise<void> {
+  try {
+    console.log(`🗑️ Deleting document with fileId: ${fileId}`)
+    
+    const { ChromaClient } = await import('chromadb')
+    const client = new ChromaClient({
+      host: "localhost",
+      port: 8000,
+      ssl: false,
+    })
+    
+    // Check if collection exists
+    let collection;
+    try {
+      collection = await client.getCollection({ name: "documents" })
+    } catch (error) {
+      console.log(`⚠️ Collection 'documents' not found, nothing to delete`)
+      return
+    }
+    
+    // Get all chunks for this file
+    const results = await collection.get({
+      where: { fileId: fileId }
+    })
+    
+    if (results.ids && results.ids.length > 0) {
+      await collection.delete({
+        ids: results.ids
+      })
+      console.log(`✅ Deleted ${results.ids.length} chunks for fileId: ${fileId}`)
+    } else {
+      console.log(`⚠️ No chunks found for fileId: ${fileId}`)
+    }
+  } catch (error) {
+    console.error('❌ Error deleting document from ChromaDB:', error)
+    // Don't throw error for deletion - just log it
+    console.log('🔄 Continuing despite ChromaDB deletion error...')
+  }
+}
+
+// ✅ Test ingestion function
+export async function testIngestion() {
+  try {
+    const testContent = `
+# Test Document
+
+This is a test document for penetration testing knowledge base.
+
+## Reconnaissance
+- Information gathering
+- Port scanning with Nmap
+- Service enumeration
+
+## Vulnerability Assessment
+- Using automated scanners
+- Manual testing techniques
+- Code review processes
+
+## Exploitation
+- Common attack vectors
+- Privilege escalation
+- Persistence mechanisms
+`
+
+    const testMetadata = {
+      source: "test-document.md",
+      fileId: "test-" + Date.now(),
+      userId: "test-user",
+      uploadedAt: new Date().toISOString()
+    }
+
+    console.log("🧪 Starting test ingestion...")
+    const chunks = await ingestDocumentToChroma(testContent, testMetadata)
+    
+    console.log("✅ Test ingestion successful!")
+    return {
+      success: true,
+      chunks: chunks,
+      metadata: testMetadata
+    }
+  } catch (error) {
+    console.error("❌ Test ingestion failed:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+// ✅ Check embedding function availability
+export async function testEmbeddingFunction() {
+  try {
+    console.log("🧪 Testing embedding function...")
+    
+    const embeddings = getEmbeddingFunction()
+    const testQuery = "penetration testing methodology"
+    
+    console.log(`📊 Generating test embedding for: "${testQuery}"`)
+    const embedding = await embeddings.embedQuery(testQuery)
+    
+    console.log(`✅ Embedding generated successfully!`)
+    console.log(`📐 Embedding dimension: ${embedding.length}`)
+    console.log(`🔢 Sample values: [${embedding.slice(0, 5).map(n => n.toFixed(4)).join(', ')}...]`)
+    
+    return {
+      success: true,
+      dimension: embedding.length,
+      sampleValues: embedding.slice(0, 10)
+    }
+  } catch (error) {
+    console.error("❌ Embedding function test failed:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
 }
