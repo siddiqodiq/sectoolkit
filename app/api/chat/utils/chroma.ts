@@ -128,7 +128,7 @@ export async function queryWithLangChain(query: string, nResults: number = 5) {
   }
 }
 
-export async function getKnowledgeBaseResponse(query: string, chatHistory: string[] = []) {
+export async function getKnowledgeBaseResponse(query: string, chatHistory: string[] = [], id?: string) {
   try {
     console.log("🔍 Querying knowledge base for:", query);
     
