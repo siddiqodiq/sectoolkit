@@ -25,3 +25,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+uploads/knowledge/3b3e938c-ae4a-42ba-8258-e2ee067fa131.pdf
+uploads/knowledge/46c3c310-b4d3-4b46-ae03-92725e3f9f6a.extracted.txt
+uploads/knowledge/46c3c310-b4d3-4b46-ae03-92725e3f9f6a.txt
+uploads/knowledge/ac673140-e8c2-4a4e-b7cb-eaffef81d793.txt
+uploads/knowledge/c5f94a60-e6de-4b03-808a-9626dc05a9a4.pdf

@@ -68,7 +68,7 @@ export default function KnowledgeBasePage() {
       if (!allowedTypes.includes(file.type)) {
         toast({
           title: "Invalid file type",
-          description: "Only .txt, .pdf, and .md files are supported",
+          description: "Only .txt, and .md files are supported",
           variant: "destructive",
         })
         return

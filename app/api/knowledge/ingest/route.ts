@@ -15,126 +15,74 @@ export async function POST(request: NextRequest) {
     }
 
     const { fileIds } = await request.json()
-    
     if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
       return NextResponse.json({ error: 'File IDs are required' }, { status: 400 })
     }
 
-    // Create a streaming response
-    const encoder = new TextEncoder()
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          // Initialize ChromaDB
-          controller.enqueue(encoder.encode(`${JSON.stringify({
-            status: "Initializing ChromaDB...",
-            progress: 10
-          })}\n`))
+    await initializeChroma()
 
-          await initializeChroma()
-
-          // Get files from database
-          const files = await prisma.knowledge.findMany({
-            where: {
-              id: { in: fileIds },
-              userId: session.user.id,
-              status: 'active'
-            }
-          })
-
-          if (files.length === 0) {
-            controller.enqueue(encoder.encode(`${JSON.stringify({
-              error: "No valid files found for ingestion"
-            })}\n`))
-            controller.close()
-            return
-          }
-
-          const totalFiles = files.length
-          let processedFiles = 0
-
-          for (const file of files) {
-            try {
-              controller.enqueue(encoder.encode(`${JSON.stringify({
-                status: `Processing ${file.name}...`,
-                progress: 20 + (processedFiles / totalFiles) * 60
-              })}\n`))
-
-              // Read file content
-              const fileContent = await readFile(file.filePath, 'utf-8')
-              
-              // Ingest to ChromaDB
-              const chunks = await ingestDocumentToChroma(
-                fileContent,
-                {
-                  source: file.name,
-                  fileId: file.id,
-                  userId: session.user.id,
-                  uploadedAt: file.uploadedAt.toISOString()
-                }
-              )
-
-              // Update database status
-              await prisma.knowledge.update({
-                where: { id: file.id },
-                data: {
-                  status: 'active',
-                  chunks: chunks,
-                  // Add ingested field to schema if not exists
-                }
-              })
-
-              processedFiles++
-              
-              controller.enqueue(encoder.encode(`${JSON.stringify({
-                status: `${file.name} ingested successfully (${chunks} chunks)`,
-                progress: 20 + (processedFiles / totalFiles) * 60
-              })}\n`))
-
-            } catch (fileError) {
-              console.error(`Error processing file ${file.name}:`, fileError)
-              
-              // Update file status to error
-              await prisma.knowledge.update({
-                where: { id: file.id },
-                data: { status: 'error' }
-              })
-
-              controller.enqueue(encoder.encode(`${JSON.stringify({
-                status: `Error processing ${file.name}: ${fileError instanceof Error ? fileError.message : 'Unknown error'}`,
-                progress: 20 + (processedFiles / totalFiles) * 60
-              })}\n`))
-            }
-          }
-
-          // Final completion
-          controller.enqueue(encoder.encode(`${JSON.stringify({
-            status: "Ingestion completed successfully!",
-            progress: 100,
-            complete: true,
-            processedFiles: processedFiles,
-            totalFiles: totalFiles
-          })}\n`))
-
-          controller.close()
-
-        } catch (error) {
-          console.error('Ingestion error:', error)
-          controller.enqueue(encoder.encode(`${JSON.stringify({
-            error: error instanceof Error ? error.message : 'Unknown error occurred',
-            progress: 0
-          })}\n`))
-          controller.close()
-        }
+    const files = await prisma.knowledge.findMany({
+      where: {
+        id: { in: fileIds },
+        userId: session.user.id,
+        status: 'active'
       }
     })
 
-    return new Response(readable, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
+    if (files.length === 0) {
+      return NextResponse.json({ error: "No valid files found for ingestion" }, { status: 400 })
+    }
+
+    let processedFiles = 0
+    let results: Array<{ fileId: string, fileName: string, status: string, chunks?: number, error?: string }> = []
+
+    for (const file of files) {
+      try {
+        const fileContent = await readFile(file.filePath, 'utf-8')
+        const chunks = await ingestDocumentToChroma(
+          fileContent,
+          {
+            source: file.name,
+            fileId: file.id,
+            userId: session.user.id,
+            uploadedAt: file.uploadedAt.toISOString()
+          }
+        )
+
+        await prisma.knowledge.update({
+          where: { id: file.id },
+          data: {
+            status: 'active',
+            chunks: chunks,
+          }
+        })
+
+        processedFiles++
+        results.push({
+          fileId: file.id,
+          fileName: file.name,
+          status: 'success',
+          chunks
+        })
+      } catch (fileError) {
+        await prisma.knowledge.update({
+          where: { id: file.id },
+          data: { status: 'error' }
+        })
+        results.push({
+          fileId: file.id,
+          fileName: file.name,
+          status: 'error',
+          error: fileError instanceof Error ? fileError.message : 'Unknown error'
+        })
+      }
+    }
+
+    return NextResponse.json({
+      status: "Ingestion completed",
+      processedFiles,
+      totalFiles: files.length,
+      results
     })
 
   } catch (error) {
