@@ -397,8 +397,7 @@ export async function ingestDocumentToChroma(
     } catch (error) {
       console.log(`📚 Creating new collection: documents`)
       collection = await client.createCollection({
-        name: "documents",
-        metadata: { "hnsw:space": "cosine" }
+        name: "documents"        
       });
     }
 

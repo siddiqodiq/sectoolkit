@@ -38,6 +38,7 @@ export default function KnowledgeBasePage() {
   const [previewFile, setPreviewFile] = useState<KnowledgeFile | null>(null)
   const [fileContent, setFileContent] = useState<string>("")
   const [ingestStatus, setIngestStatus] = useState<string>("")
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -130,7 +131,6 @@ export default function KnowledgeBasePage() {
   }
 
   const handleDelete = async (fileId: string, fileName: string) => {
-    if (!confirm(`Are you sure you want to delete "${fileName}"?`)) return
 
     try {
       const response = await fetch(`/api/knowledge/files/${fileId}`, {
@@ -524,7 +524,7 @@ export default function KnowledgeBasePage() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleDelete(file.id, file.name)}
+                                    onClick={() => setConfirmDelete({ id: file.id, name: file.name })}
                                     className="border-gray-600 text-red-400 hover:bg-red-500/20 hover:text-red-300"
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -536,6 +536,42 @@ export default function KnowledgeBasePage() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    {/* Confirmation Dialog */}
+                    <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+                      <DialogContent className="max-w-md bg-gray-800 border-gray-700">
+                        <DialogHeader>
+                          <DialogTitle className="text-red-400 flex items-center gap-2">
+                            <Trash2 className="h-5 w-5" />
+                            Confirm Delete
+                          </DialogTitle>
+                          <DialogDescription className="text-gray-400">
+                            Are you sure you want to delete <span className="font-semibold text-gray-200">{confirmDelete?.name}</span>? This action cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => setConfirmDelete(null)}
+                            className="border-gray-600 text-gray-300"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={async () => {
+                              if (confirmDelete) {
+                                await handleDelete(confirmDelete.id, confirmDelete.name)
+                                setConfirmDelete(null)
+                              }
+                            }}
+                            className="bg-red-600 text-white hover:bg-red-700"
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </TabsContent>
                 </Tabs>
               </div>

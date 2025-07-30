@@ -9,6 +9,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.module.rules.push({
+        test: /\.node$/,
+        use: 'ignore-loader',
+      });
+    }
+    return config;
+  },
 }
 
 export default nextConfig
