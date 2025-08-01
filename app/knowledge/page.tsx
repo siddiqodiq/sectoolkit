@@ -64,11 +64,15 @@ export default function KnowledgeBasePage() {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      const allowedTypes = ['text/plain', 'application/pdf', 'text/markdown']
-      if (!allowedTypes.includes(file.type)) {
+      // FIX: Validate by extension as well, as MIME type can be unreliable for .md
+      const allowedMimeTypes = ['text/plain', 'application/pdf', 'text/markdown'];
+      const allowedExtensions = ['.txt', '.pdf', '.md'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+      if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
         toast({
           title: "Invalid file type",
-          description: "Only .txt, and .md files are supported",
+          description: "Only .txt, .pdf, and .md files are supported",
           variant: "destructive",
         })
         return
@@ -87,7 +91,6 @@ export default function KnowledgeBasePage() {
     }
   }
 
-  // ...existing code...
   const handleUpload = async () => {
     if (!selectedFile) return
 

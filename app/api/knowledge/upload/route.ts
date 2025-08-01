@@ -21,9 +21,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
     }
 
-    // Validate file type
-    const allowedTypes = ['text/plain', 'application/pdf', 'text/markdown']
-    if (!allowedTypes.includes(file.type)) {
+    // FIX: Validate by extension as well, to match frontend logic
+    const allowedMimeTypes = ['text/plain', 'application/pdf', 'text/markdown'];
+    const allowedExtensions = ['.txt', '.pdf', '.md'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
       return NextResponse.json({ 
         error: 'Invalid file type. Only .txt, .pdf, and .md files are supported' 
       }, { status: 400 })
@@ -38,7 +41,6 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename
     const fileId = uuidv4()
-    const fileExtension = file.name.split('.').pop()
     const fileName = `${fileId}.${fileExtension}`
     
     // Create uploads directory if it doesn't exist
