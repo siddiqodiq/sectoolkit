@@ -2,21 +2,24 @@ import { Chroma } from "@langchain/community/vectorstores/chroma";
 import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
 import { Document } from "@langchain/core/documents";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import { RunnableSequence, RunnablePassthrough } from "@langchain/core/runnables";
+import { RunnableSequence } from "@langchain/core/runnables";
 import { ChatOllama } from "@langchain/community/chat_models/ollama";
 import {
   ChatPromptTemplate,
   SystemMessagePromptTemplate,
   HumanMessagePromptTemplate,
 } from "@langchain/core/prompts";
-import path from "path";
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter'
-
-const CHROMA_DB_PATH = path.join(process.cwd(), "db", "chroma_langchain_db");
+import { ChromaClient } from "chromadb";
 
 let vectorStore: Chroma | null = null;
 let embeddingFunction: OllamaEmbeddings | null = null;
 
+// Get ChromaDB host from environment
+const CHROMA_HOST = process.env.CHROMA_HOST || "localhost";
+const CHROMA_PORT = process.env.CHROMA_PORT || "8000";
+const CHROMA_URL = `http://${CHROMA_HOST}:${CHROMA_PORT}`;
+const CHROMA_DB_PATH = process.env.CHROMA_DB_PATH || "./db/chroma_langchain_db";
 // Initialize embedding function
 function getEmbeddingFunction() {
   if (!embeddingFunction) {
@@ -33,10 +36,12 @@ export async function initializeChroma() {
     try {
       const embeddings = getEmbeddingFunction();
 
-      // Initialize Chroma with server configuration
+      console.log(`🔄 Connecting to ChromaDB at ${CHROMA_URL}`);
+
+      // Initialize Chroma with external server configuration
       vectorStore = new Chroma(embeddings, {
-        collectionName: "documents", // Use "documents" as shown in the logs
-        url: "http://localhost:8000",
+        collectionName: "documents",
+        url: CHROMA_URL,
         collectionMetadata: {
           "hnsw:space": "cosine",
         },
@@ -55,9 +60,6 @@ export async function initializeChroma() {
 // Direct ChromaDB client approach with embedding function
 export async function queryChromaDirectly(query: string, nResults: number = 5) {
   try {
-    const { ChromaClient } = await import('chromadb');
-    
-    // Use new ChromaDB client configuration
     const client = new ChromaClient({
       host: "localhost",
       port: 8000,
@@ -261,8 +263,6 @@ export async function testChromaConnection() {
 // Helper function to check collection info
 export async function getCollectionInfo() {
   try {
-    const { ChromaClient } = await import('chromadb');
-    
     const client = new ChromaClient({
       host: "localhost",
       port: 8000,
@@ -315,7 +315,7 @@ export async function getCollectionInfo() {
 // Helper function to check if ChromaDB server is running
 export async function checkChromaDBServer() {
   try {
-    const response = await fetch("http://localhost:8000/api/v1/version");
+    const response = await fetch(`${CHROMA_URL}/api/v1/version`);
     if (response.ok) {
       const data = await response.json();
       console.log("✅ ChromaDB server is running, version:", data);
@@ -381,11 +381,9 @@ export async function ingestDocumentToChroma(
     console.log(`📄 Starting ingestion for: ${metadata.source}`)
     
     // Use direct ChromaDB instead of LangChain wrapper
-    const { ChromaClient } = await import('chromadb');
-    
     const client = new ChromaClient({
-      host: "localhost",
-      port: 8000,
+      host: CHROMA_HOST, // Gunakan variabel yang sudah didefinisikan
+      port: parseInt(CHROMA_PORT), // Gunakan variabel yang sudah didefinisikan
       ssl: false,
     });
 
@@ -396,8 +394,9 @@ export async function ingestDocumentToChroma(
       console.log(`📚 Using existing collection: documents`)
     } catch (error) {
       console.log(`📚 Creating new collection: documents`)
+      // ❗ FIX: Sediakan embedding function saat membuat koleksi
       collection = await client.createCollection({
-        name: "documents"        
+        name: "documents",
       });
     }
 
@@ -485,7 +484,6 @@ export async function deleteDocumentFromChroma(fileId: string): Promise<void> {
   try {
     console.log(`🗑️ Deleting document with fileId: ${fileId}`)
     
-    const { ChromaClient } = await import('chromadb')
     const client = new ChromaClient({
       host: "localhost",
       port: 8000,
