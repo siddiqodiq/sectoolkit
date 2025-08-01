@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import  prisma  from '@/lib/db'
-import { writeFile } from 'fs/promises'
+import prisma from '@/lib/db'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -43,6 +43,9 @@ export async function POST(request: NextRequest) {
     
     // Create uploads directory if it doesn't exist
     const uploadsDir = join(process.cwd(), 'uploads', 'knowledge')
+    
+    // ✅ Ensure directory exists
+    await mkdir(uploadsDir, { recursive: true })
     
     // Convert file to buffer and save
     const bytes = await file.arrayBuffer()
