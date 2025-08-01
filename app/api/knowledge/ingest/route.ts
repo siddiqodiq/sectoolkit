@@ -6,6 +6,7 @@ import prisma from '@/lib/db'
 import { initializeChroma, ingestDocumentToChroma } from '@/app/api/chat/utils/chroma'
 import { readFile } from 'fs/promises'
 import path from 'path'
+import pdf from 'pdf-parse'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,7 +39,26 @@ export async function POST(request: NextRequest) {
 
     for (const file of files) {
       try {
-        const fileContent = await readFile(file.filePath, 'utf-8')
+        console.log(`[DEBUG] Attempting to read file from path: ${file.filePath}`);
+         let fileContent = ''
+
+        // --- PERBAIKAN: Tambahkan logika parsing PDF ---
+        if (file.mimeType === 'application/pdf') {
+          console.log(`📄 Parsing PDF file: ${file.name}`)
+          const pdfBuffer = await readFile(file.filePath)
+          const data = await pdf(pdfBuffer)
+          fileContent = data.text
+        } else {
+          // Gunakan metode lama untuk file teks biasa (.txt, .md)
+          console.log(`📄 Reading text file: ${file.name}`)
+          fileContent = await readFile(file.filePath, 'utf-8')
+        }
+        // --- AKHIR PERBAIKAN ---
+
+        if (!fileContent.trim()) {
+          throw new Error('Extracted content is empty.')
+        }
+
         const chunks = await ingestDocumentToChroma(
           fileContent,
           {

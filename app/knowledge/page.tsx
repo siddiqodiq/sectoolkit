@@ -87,6 +87,7 @@ export default function KnowledgeBasePage() {
     }
   }
 
+  // ...existing code...
   const handleUpload = async () => {
     if (!selectedFile) return
 
@@ -103,32 +104,33 @@ export default function KnowledgeBasePage() {
       })
 
       if (!response.ok) {
-        throw new Error('Upload failed')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
       }
 
+      const result = await response.json()
       toast({
         title: "Upload successful",
-        description: `${selectedFile.name} has been added to knowledge base`,
+        description: `${result.name} has been uploaded.`,
       })
-
       setSelectedFile(null)
-      loadKnowledgeFiles()
-      
-      const fileInput = document.getElementById('file-upload') as HTMLInputElement
-      if (fileInput) fileInput.value = ''
 
     } catch (error) {
       console.error('Upload error:', error)
       toast({
         title: "Upload failed",
-        description: "Failed to upload file to knowledge base",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       })
     } finally {
       setIsLoading(false)
       setUploadProgress(0)
+      // --- TAMBAHKAN BARIS INI UNTUK MEMUAT ULANG DAFTAR FILE ---
+      loadKnowledgeFiles() 
+      // ---------------------------------------------------------
     }
   }
+
 
   const handleDelete = async (fileId: string, fileName: string) => {
 
