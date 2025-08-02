@@ -77,12 +77,12 @@ export async function POST(req: Request) {
           session.user.id // Pass user ID for filtering
         )
         
-        // Save AI response to database (tanpa metadata)
         await prisma.message.create({
           data: {
             chatId: chat.id,
             content: knowledgeData.response,
-            role: 'ASSISTANT'
+            role: 'ASSISTANT',
+            metadata: { sources: knowledgeData.sources }
           }
         })
 

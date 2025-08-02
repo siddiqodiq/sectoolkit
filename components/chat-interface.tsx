@@ -133,7 +133,8 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
         const formattedMessages = data.messages.map((msg: any) => ({
           id: msg.id,
           role: msg.role.toLowerCase(),
-          content: msg.content
+          content: msg.content,
+          sources: msg.metadata?.sources || undefined // LOAD SOURCES DARI METADATA
         }))
         
         setMessages(formattedMessages)
