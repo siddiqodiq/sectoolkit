@@ -152,7 +152,10 @@ export async function getKnowledgeBaseResponse(query: string, chatHistory: strin
     }
     
     if (queryResults.documents.length === 0) {
-      return "Maaf, saya tidak menemukan informasi yang relevan dalam knowledge base untuk pertanyaan ini.";
+      return {
+        response: "Maaf, saya tidak menemukan informasi yang relevan dalam knowledge base untuk pertanyaan ini.",
+        sources: []
+      };
     }
 
     // Format context from query results
@@ -206,8 +209,19 @@ Instructions:
       question: query
     });
 
-    console.log("✅ Knowledge base response generated");
-    return response;
+    // Ekstrak nama file sumber yang unik dari metadata
+    const sources = Array.from(
+      new Set(
+        queryResults.metadatas
+          .map((meta: any) => meta?.source)
+          .filter(Boolean) // Hapus nilai null/undefined
+      )
+    );
+
+    console.log("✅ Knowledge base response generated with sources:", sources);
+    
+    // Kembalikan objek dengan respons dan sumber
+    return { response, sources };
   } catch (error) {
     console.error("❌ Knowledge base error:", error);
     throw new Error(`Failed to query knowledge base: ${error instanceof Error ? error.message : 'Unknown error'}`);

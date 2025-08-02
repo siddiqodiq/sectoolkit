@@ -70,39 +70,30 @@ export async function POST(req: Request) {
       console.log('🔍 Using Knowledge Base mode...')
       
       try {
-        // Pass userId to get user-specific knowledge
-        const ragResponse = await getKnowledgeBaseResponse(
+        // getKnowledgeBaseResponse sekarang mengembalikan { response, sources }
+        const knowledgeData = await getKnowledgeBaseResponse(
           userMessage.content,
           [], // chatHistory if needed
           session.user.id // Pass user ID for filtering
         )
-        const fullResponse = `${ragResponse}`
         
-        // Save AI response to database
+        // Save AI response to database (tanpa metadata)
         await prisma.message.create({
           data: {
             chatId: chat.id,
-            content: fullResponse,
+            content: knowledgeData.response,
             role: 'ASSISTANT'
           }
         })
 
-        // Update chat title if this is a new conversation
-        if (previousMessages.length === 0) {
-          await prisma.chat.update({
-            where: { id: chat.id },
-            data: {
-              title: userMessage.content.substring(0, 50)
-            }
-          })
-        }
+        // SKIP saving sources to database for now
+        // TODO: Add proper database structure later
 
-        // Return non-streaming response for knowledge base
-        return new Response(fullResponse, {
-          headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'X-Chat-Id': chat.id,
-          },
+        // Return JSON response with content and sources
+        return NextResponse.json({
+          content: knowledgeData.response,
+          sources: knowledgeData.sources,
+          chatId: chat.id
         })
       } catch (ragError) {
         console.error('❌ Knowledge base error:', ragError)
