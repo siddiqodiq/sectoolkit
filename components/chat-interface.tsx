@@ -339,7 +339,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
       console.error("Error:", error)
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
+        content: "Failed to connect to your Ollama server (local). Ensure it is running and reachable, then try again.",
         id: `error-${Date.now()}`
       }])
       toast({
@@ -448,7 +448,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
       console.error("Error:", error);
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: "Sorry, I encountered an error processing the tool results. Please try again.",
+        content: "Failed to connect to your Ollama server (local). Ensure it is running and reachable, then try again.",
         id: `error-${Date.now()}`
       }]);
       toast({
