@@ -31,6 +31,7 @@ interface KnowledgeFile {
 export default function KnowledgeBasePage() {
   const [files, setFiles] = useState<KnowledgeFile[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false) // <-- TAMBAHKAN STATE INI
   const [isIngesting, setIsIngesting] = useState(false)
   const [ingestProgress, setIngestProgress] = useState(0)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -558,21 +559,29 @@ export default function KnowledgeBasePage() {
                           <Button
                             variant="outline"
                             onClick={() => setConfirmDelete(null)}
+                            disabled={isDeleting}
                             className="border-gray-600 text-gray-300"
                           >
                             Cancel
                           </Button>
                           <Button
                             variant="destructive"
+                            disabled={isDeleting}
                             onClick={async () => {
                               if (confirmDelete) {
+                                setIsDeleting(true);
                                 await handleDelete(confirmDelete.id, confirmDelete.name)
+                                setIsDeleting(false);
                                 setConfirmDelete(null)
                               }
                             }}
-                            className="bg-red-600 text-white hover:bg-red-700"
+                            className="bg-red-600 text-white hover:bg-red-700 w-28"
                           >
-                            Delete
+                            {isDeleting ? (
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                            ) : (
+                              'Delete'
+                            )}
                           </Button>
                         </div>
                       </DialogContent>
