@@ -35,7 +35,7 @@ export default function KnowledgeBasePage() {
   const [isIngesting, setIsIngesting] = useState(false)
   const [ingestProgress, setIngestProgress] = useState(0)
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]) 
   const [previewFile, setPreviewFile] = useState<KnowledgeFile | null>(null)
   const [fileContent, setFileContent] = useState<string>("")
   const [ingestStatus, setIngestStatus] = useState<string>("")
@@ -63,44 +63,38 @@ export default function KnowledgeBasePage() {
   }
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // FIX: Validate by extension as well, as MIME type can be unreliable for .md
+    const files = event.target.files ? Array.from(event.target.files) : []
+    const validFiles: File[] = []
+    
+    for (const file of files) {
       const allowedMimeTypes = ['text/plain', 'application/pdf', 'text/markdown'];
       const allowedExtensions = ['.txt', '.pdf', '.md'];
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
 
-      if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      if ((!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) || file.size > 10 * 1024 * 1024) {
         toast({
-          title: "Invalid file type",
-          description: "Only .txt, .pdf, and .md files are supported",
+          title: "File Skipped",
+          description: `${file.name} is invalid or too large.`,
           variant: "destructive",
         })
-        return
+        continue; // Lanjut ke file berikutnya
       }
-      
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Maximum file size is 10MB",
-          variant: "destructive",
-        })
-        return
-      }
-      
-      setSelectedFile(file)
+      validFiles.push(file)
     }
+    setSelectedFiles(validFiles)
   }
 
   const handleUpload = async () => {
-    if (!selectedFile) return
+    if (selectedFiles.length === 0) return
 
     setIsLoading(true)
     setUploadProgress(0)
 
     try {
       const formData = new FormData()
-      formData.append('file', selectedFile)
+      selectedFiles.forEach(file => {
+        formData.append('files', file) // Gunakan 'files' (plural)
+      })
 
       const response = await fetch('/api/knowledge/upload', {
         method: 'POST',
@@ -115,9 +109,9 @@ export default function KnowledgeBasePage() {
       const result = await response.json()
       toast({
         title: "Upload successful",
-        description: `${result.name} has been uploaded.`,
+        description: `${result.count} file(s) have been uploaded.`,
       })
-      setSelectedFile(null)
+      setSelectedFiles([]) // Kosongkan setelah berhasil
 
     } catch (error) {
       console.error('Upload error:', error)
@@ -404,39 +398,40 @@ export default function KnowledgeBasePage() {
                       <CardContent className="space-y-6">
                         <div className="space-y-4">
                           <div>
-                            <Label htmlFor="file-upload" className="text-gray-300">Select File</Label>
+                            <Label htmlFor="file-upload" className="text-gray-300">Select File(s)</Label>
                             <Input
                               id="file-upload"
                               type="file"
                               accept=".txt,.pdf,.md"
                               onChange={handleFileSelect}
                               className="mt-1 bg-gray-700/50 border-gray-600 text-gray-200"
+                              multiple // <-- TAMBAHKAN INI
                             />
                             <p className="text-xs text-gray-400 mt-1">
                               Supported formats: .txt, .pdf, .md (max 10MB)
                             </p>
                           </div>
 
-                          {selectedFile && (
-                            <Card className="p-4 bg-gray-700/50 border-gray-600">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <FileText className="h-8 w-8 text-blue-400" />
-                                  <div>
-                                    <p className="font-medium text-gray-200">{selectedFile.name}</p>
-                                    <p className="text-sm text-gray-400">
-                                      {formatFileSize(selectedFile.size)}
-                                    </p>
+                          {selectedFiles.length > 0 && (
+                            <Card className="p-4 bg-gray-700/50 border-gray-600 space-y-4">
+                              <div>
+                                {selectedFiles.map((file, index) => (
+                                  <div key={index} className="flex items-center gap-3 mb-2">
+                                    <FileText className="h-6 w-6 text-blue-400" />
+                                    <div>
+                                      <p className="font-medium text-gray-200 text-sm">{file.name}</p>
+                                      <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                                    </div>
                                   </div>
-                                </div>
-                                <Button 
-                                  onClick={handleUpload}
-                                  disabled={isLoading}
-                                  className="gradient-btn"
-                                >
-                                  {isLoading ? 'Uploading...' : 'Upload'}
-                                </Button>
+                                ))}
                               </div>
+                              <Button 
+                                onClick={handleUpload}
+                                disabled={isLoading}
+                                className="gradient-btn w-full"
+                              >
+                                {isLoading ? `Uploading ${selectedFiles.length} file(s)...` : `Upload ${selectedFiles.length} file(s)`}
+                              </Button>
                               {isLoading && (
                                 <Progress value={uploadProgress} className="mt-3" />
                               )}
@@ -537,8 +532,8 @@ export default function KnowledgeBasePage() {
                                   </Button>
                                 </div>
                               </div>
-                            ))
-                          )}
+                            )))
+                          }
                         </div>
                       </CardContent>
                     </Card>

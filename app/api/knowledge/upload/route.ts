@@ -15,79 +15,64 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData()
-    const file = formData.get('file') as File
+    const files = formData.getAll('files') as File[] // <-- Gunakan getAll('files')
     
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    if (!files || files.length === 0) {
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 })
     }
 
-    // FIX: Validate by extension as well, to match frontend logic
-    const allowedMimeTypes = ['text/plain', 'application/pdf', 'text/markdown'];
-    const allowedExtensions = ['.txt', '.pdf', '.md'];
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-
-    if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-      return NextResponse.json({ 
-        error: 'Invalid file type. Only .txt, .pdf, and .md files are supported' 
-      }, { status: 400 })
-    }
-
-    // Validate file size (10MB max)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ 
-        error: 'File too large. Maximum size is 10MB' 
-      }, { status: 400 })
-    }
-
-    // Generate unique filename
-    const fileId = uuidv4()
-    const fileName = `${fileId}.${fileExtension}`
-    
-    // Create uploads directory if it doesn't exist
     const uploadsDir = join(process.cwd(), 'uploads', 'knowledge')
-    
-    // ✅ Ensure directory exists
     await mkdir(uploadsDir, { recursive: true })
-    
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    const filePath = join(uploadsDir, fileName)
-    
-    await writeFile(filePath, buffer)
 
-    // Save file metadata to database
-    const knowledge = await prisma.knowledge.create({
-      data: {
-        id: fileId,
-        name: file.name,
-        fileName: fileName,
-        filePath: filePath,
-        size: file.size,
-        mimeType: file.type,
-        userId: session.user.id,
-        status: 'processing'
+    const results = []
+
+    for (const file of files) {
+      // --- Lakukan validasi untuk setiap file ---
+      const allowedMimeTypes = ['text/plain', 'application/pdf', 'text/markdown'];
+      const allowedExtensions = ['.txt', '.pdf', '.md'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+      if ((!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) || file.size > 10 * 1024 * 1024) {
+        console.warn(`Skipping invalid file: ${file.name}`)
+        continue; // Skip file ini dan lanjut ke berikutnya
       }
-    })
 
-    // Process file for embedding (background task)
-    processFileForEmbedding(fileId, filePath, file.type)
+      // --- Proses setiap file yang valid ---
+      const fileId = uuidv4()
+      const fileName = `${fileId}${fileExtension}` // Gunakan fileExtension yang sudah diekstrak
+      const filePath = join(uploadsDir, fileName)
+      
+      const bytes = await file.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+      await writeFile(filePath, buffer)
+
+      const knowledge = await prisma.knowledge.create({
+        data: {
+          id: fileId,
+          name: file.name,
+          fileName: fileName,
+          filePath: filePath,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream', // Fallback mimeType
+          userId: session.user.id,
+          status: 'active' // Langsung set 'active' untuk disederhanakan
+        }
+      })
+      results.push(knowledge)
+    }
 
     return NextResponse.json({
       success: true,
-      file: {
-        id: knowledge.id,
-        name: knowledge.name,
-        size: knowledge.size,
-        status: knowledge.status
-      }
+      count: results.length,
+      files: results.map(k => ({ id: k.id, name: k.name }))
     })
+
   } catch (error) {
     console.error('Error uploading knowledge file:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
+/*
 async function processFileForEmbedding(fileId: string, filePath: string, mimeType: string) {
   try {
     // Process file and create embeddings
@@ -108,4 +93,4 @@ async function processFileForEmbedding(fileId: string, filePath: string, mimeTyp
       data: { status: 'error' }
     })
   }
-}
+} */
