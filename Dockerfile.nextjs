@@ -1,5 +1,6 @@
 # Stage 1: Builder
-FROM node:18-alpine AS builder
+# ✅ Gunakan image berbasis Debian untuk kompatibilitas yang lebih baik
+FROM node:18-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -15,12 +16,22 @@ COPY . .
 RUN pnpm build
 
 # Stage 2: Runner
-FROM node:18-alpine
+# ✅ Gunakan image berbasis Debian yang sama
+FROM node:18-bookworm-slim
 
 WORKDIR /app
 
-# Install netcat untuk health checks saja
-RUN apk add --no-cache netcat-openbsd curl
+# ✅ Gunakan apt-get untuk menginstal paket di Debian
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    netcat-traditional \
+    curl \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# ✅ Install ChromaDB menggunakan pip
+# Tidak perlu --break-system-packages di lingkungan ini
+RUN pip install --no-cache-dir chromadb --break-system-packages
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -36,10 +47,12 @@ RUN pnpm install --prod --frozen-lockfile
 
 RUN pnpm prisma generate
 COPY ./test ./test
-# COPY ./db ./db
+COPY ./db ./db
+
 ENV STUDIO_EMBED_BUILD=false
 
 EXPOSE 3000
+EXPOSE 8000
 
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
