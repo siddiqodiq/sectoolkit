@@ -35,7 +35,8 @@ COPY --from=builder /app/node_modules ./node_modules
 RUN pnpm install --prod --frozen-lockfile
 
 RUN pnpm prisma generate
-
+COPY ./test ./test
+# COPY ./db ./db
 ENV STUDIO_EMBED_BUILD=false
 
 EXPOSE 3000
