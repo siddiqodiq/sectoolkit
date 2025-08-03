@@ -622,13 +622,17 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
                         Sources
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {message.sources.map((source, index) => (
-                          <div key={index} className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-md flex items-center gap-1">
-                            <FileText className="h-3 w-3" />
-                            {source}
-                          </div>
-                        ))}
-                      </div>
+    {message.sources.map((source, index) => (
+  <div
+    key={index}
+    className="bg-secondary text-xs px-2 py-1 rounded-md flex items-center gap-1 font-bold" // tambah font-bold
+    style={{ color: "#000435" }} // Navy gelap
+  >
+    <FileText className="h-3 w-3" style={{ color: "#000435" }} />
+    {source}
+  </div>
+))}
+  </div>
                     </div>
                   )}
                   {/* AKHIR BLOK SOURCES */}
