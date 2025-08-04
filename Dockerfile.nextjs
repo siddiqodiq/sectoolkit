@@ -30,8 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ✅ Install ChromaDB menggunakan pip
-# Tidak perlu --break-system-packages di lingkungan ini
-RUN pip install --no-cache-dir chromadb --break-system-packages
+RUN pip install chromadb --break-system-packages
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 

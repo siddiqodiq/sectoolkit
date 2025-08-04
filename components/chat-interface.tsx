@@ -481,7 +481,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
             <Logo className="h-7 w-7 text-white" />
           </div>
           <h2 className="text-lg font-bold gradient-text">
-            Hi, {session?.user?.name || 'User'} !
+            Hi, {session?.user?.username || 'User'} !
           </h2>
         </div>
         

@@ -355,7 +355,7 @@ export function MainSidebar() {
                 {session?.user?.name || 'User'}
               </p>
               <p className="text-xs text-gray-400">
-                @{session?.user?.email || session?.user?.name || 'user'}
+                {session?.user?.email || session?.user?.name || 'user'}
               </p>
             </div>
           </div>
