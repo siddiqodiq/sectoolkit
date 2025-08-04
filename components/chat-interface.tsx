@@ -25,12 +25,12 @@ import { useSearchParams } from "next/navigation"
 interface ChatInterfaceProps {
   activeTool: string | null
 }
-
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: string[]; // TAMBAHKAN PROPERTI INI
+  sources?: string[];
+  isLoading?: boolean; 
 }
 
 export function ChatInterface({ activeTool }: ChatInterfaceProps) {
@@ -52,6 +52,29 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
   const { data: session } = useSession()
   const [useKnowledgeBase, setUseKnowledgeBase] = useState(false)
   
+// Tambahkan komponen loading animation sebelum export ChatInterface
+const LoadingDots = () => (
+  <div className="flex items-center space-x-1">
+    <div className="flex space-x-1">
+      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+    </div>
+    <span className="text-gray-400 text-sm ml-2">AI is thinking...</span>
+  </div>
+)
+
+const TypingIndicator = () => (
+  <div className="flex items-center space-x-2 text-gray-400 text-sm">
+    <div className="flex space-x-1">
+      <div className="w-1 h-4 bg-blue-400 rounded-full animate-pulse"></div>
+      <div className="w-1 h-4 bg-blue-400 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+      <div className="w-1 h-4 bg-blue-400 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+    </div>
+    <span>Generating response...</span>
+  </div>
+)
+
   useEffect(() => {
     if (activeTool) {
       setIsToolModalOpen(true)
@@ -252,11 +275,18 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
     content: input,
     id: Date.now().toString()
   }
+
+  // ✅ TAMBAHKAN: Bubble loading langsung muncul setelah user message
+  const loadingMessage: Message = {
+    role: "assistant",
+    content: "",
+    id: `loading-${Date.now()}`,
+    isLoading: true
+  }
   
-  setMessages(prev => [...prev, userMessage])
+  setMessages(prev => [...prev, userMessage, loadingMessage])
   setInput("")
 
-  // ✅ TAMBAHKAN: Variable untuk menyimpan chatId baru
   let newChatId: string | null = null
 
   try {
@@ -281,12 +311,10 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
-    // ✅ UBAH: Simpan chatId tapi jangan update URL dulu
     const responseChatId = response.headers.get('X-Chat-Id')
     if (responseChatId && !currentChatId) {
       newChatId = responseChatId
       setCurrentChatId(responseChatId)
-      // JANGAN update URL di sini - tunggu sampai streaming selesai
     }
 
     if (useKnowledgeBase) {
@@ -298,40 +326,34 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
       let sources: string[] = [];
       const assistantMessageId = `assistant-${Date.now()}`;
       
-      // Initialize message with empty content
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "", 
-        sources: [], // Initialize empty sources
-        id: assistantMessageId 
-      }]);
+      // ✅ REPLACE loading message dengan actual message
+      setMessages(prev => prev.map(msg => 
+        msg.id === loadingMessage.id 
+          ? { ...msg, id: assistantMessageId, isLoading: false, content: "" }
+          : msg
+      ));
 
       const decoder = new TextDecoder();
-      let buffer = ""; // Buffer untuk menangani chunks yang tidak lengkap
+      let buffer = "";
       
       while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
         try {
           const { done, value } = await reader.read();
           if (done) break;
 
-          // Decode chunk dan tambahkan ke buffer
           const chunk = decoder.decode(value, { stream: true });
           buffer += chunk;
           
-          // Split berdasarkan newline dan proses setiap line
           const lines = buffer.split('\n');
-          
-          // Simpan line terakhir yang mungkin tidak lengkap
           buffer = lines.pop() || "";
           
           for (const line of lines) {
-            if (!line.trim()) continue; // Skip empty lines
+            if (!line.trim()) continue;
             
             try {
               const data = JSON.parse(line);
               
               if (data.type === 'sources') {
-                // Update sources segera setelah diterima
                 sources = data.data;
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
@@ -339,7 +361,6 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
                     : msg
                 ));
               } else if (data.type === 'content') {
-                // Append hanya data content, bukan seluruh line JSON
                 fullContent += data.data;
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
@@ -349,7 +370,6 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
               }
             } catch (parseError) {
               console.error('Error parsing JSON line:', parseError);
-              // Jika bukan JSON valid, treat sebagai plain text
               fullContent += line;
               setMessages(prev => prev.map(msg => 
                 msg.id === assistantMessageId 
@@ -385,8 +405,6 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
             ));
           }
         } catch (parseError) {
-          console.error('Error parsing remaining buffer content:', parseError);
-          // Treat as plain text
           fullContent += buffer;
           setMessages(prev => prev.map(msg => 
             msg.id === assistantMessageId 
@@ -396,40 +414,35 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
         }
       }
     } else {
-      // Original streaming handling
+      // Original streaming handling untuk mode Direct LLM
       const reader = response.body?.getReader()
       if (!reader) throw new Error("No reader available")
 
       let fullContent = ""
       const assistantMessageId = `assistant-${Date.now()}`
       
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "", 
-        id: assistantMessageId 
-      }])
+      // ✅ REPLACE loading message dengan actual message
+      setMessages(prev => prev.map(msg => 
+        msg.id === loadingMessage.id 
+          ? { ...msg, id: assistantMessageId, isLoading: false, content: "" }
+          : msg
+      ));
 
       const decoder = new TextDecoder()
-      
-      console.log('🚀 Starting real-time streaming...')
       
       while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
         try {
           const { done, value } = await reader.read()
-          if (done) {
-            console.log('✅ Stream completed')
-            break
-          }
+          if (done) break
 
           const chunk = decoder.decode(value, { stream: true })
           fullContent += chunk
           
-          setMessages(prev => prev.map(msg => 
+              setMessages(prev => prev.map(msg => 
             msg.id === assistantMessageId 
               ? { ...msg, content: fullContent } 
               : msg
           ))
-          
           if (isAtBottom && !scrollLockRef.current) {
             scrollToBottom('auto')
           }
@@ -444,34 +457,29 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
       }
     }
 
-    // ✅ TAMBAHKAN: Update URL SETELAH streaming selesai
+    // Update URL setelah streaming selesai
     if (newChatId) {
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.set('chat', newChatId)
       window.history.replaceState({}, '', newUrl.toString())
-      
-      console.log('✅ Chat URL updated to:', newUrl.toString())
     }
 
   } catch (error) {
+    // ✅ HANDLE ERROR: Ganti loading message dengan error message
     if (error instanceof Error && error.name === 'AbortError') {
       console.log('🛑 Request aborted')
-      toast({
-        title: "Request aborted",
-        description: "The request was cancelled",
-      })
+      setMessages(prev => prev.filter(msg => msg.id !== loadingMessage.id))
     } else {
       console.error("Error:", error)
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Failed to connect to your Ollama server (local). Ensure it is running and reachable, then try again.",
-        id: `error-${Date.now()}`
-      }])
-      toast({
-        title: "Error",
-        description: "Failed to get response from AI",
-        variant: "destructive",
-      })
+      setMessages(prev => prev.map(msg => 
+        msg.id === loadingMessage.id 
+          ? { 
+              ...msg, 
+              content: "Failed to connect to your Ollama server (local). Ensure it is running and reachable, then try again.",
+              isLoading: false 
+            }
+          : msg
+      ))
     }
   } finally {
     streamingRef.current = false
@@ -724,35 +732,58 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
                 </div>
                 <div className="flex-1">
                   <div className="font-medium flex items-center gap-2">
-                    {message.role === "user" ? "You" : "PentestAI"}
-                    {message.role === "assistant"}
+                     {message.role === "user" ? session?.user?.username || "You" : "PentestAI"}
                   </div>
                   <div className="mt-1 text-sm">
-                    <MessageContent content={message.content} />
+                    {/* ✅ CONDITIONALLY RENDER: Loading animation atau content */}
+                    {message.isLoading ? (
+                      <div className="py-2">
+                        {useKnowledgeBase ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                              <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                            </div>
+                            <span className="text-gray-400 text-sm">Searching knowledge base...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            </div>
+                            <span className="text-gray-400 text-sm">AI is thinking...</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <MessageContent content={message.content} />
+                    )}
                   </div>
                   
-                  {/* TAMBAHKAN BLOK INI UNTUK MENAMPILKAN SUMBER */}
-                  {message.sources && message.sources.length > 0 && (
+                  {/* Sources hanya tampil jika tidak loading */}
+                  {!message.isLoading && message.sources && message.sources.length > 0 && (
                     <div className="mt-4 pt-3 border-t border-border/50">
                       <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Sources
                       </h4>
                       <div className="flex flex-wrap gap-2">
-    {message.sources.map((source, index) => (
-  <div
-    key={index}
-    className="bg-secondary text-xs px-2 py-1 rounded-md flex items-center gap-1 font-bold" // tambah font-bold
-    style={{ color: "#000435" }} // Navy gelap
-  >
-    <FileText className="h-3 w-3" style={{ color: "#000435" }} />
-    {source}
-  </div>
-))}
-  </div>
+                        {message.sources.map((source, index) => (
+                          <div
+                            key={index}
+                            className="bg-secondary text-xs px-2 py-1 rounded-md flex items-center gap-1 font-bold"
+                            style={{ color: "#000435" }}
+                          >
+                            <FileText className="h-3 w-3" style={{ color: "#000435" }} />
+                            {source}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {/* AKHIR BLOK SOURCES */}
                 </div>
               </div>
             </Card>
