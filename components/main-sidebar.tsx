@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Shield, Database, Settings, LogOut, User, Bell, Moon, HelpCircle, Plus, MoreVertical, Loader2, Boxes, Brain, MessageSquare, ChevronLeft, ChevronRight } from "lucide-react"
+import { Shield, Database, Settings, LogOut, User, Bell, Moon, HelpCircle, Plus, MoreVertical, Loader2, Boxes, Brain, MessageSquare, ChevronLeft, ChevronRight, Edit, Check, X, Trash, Trash2 } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
 
 const navigationItems = [
   {
@@ -70,6 +71,8 @@ export function MainSidebar() {
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false) 
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [editingChatId, setEditingChatId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState("")
 
   // Fungsi untuk mendapatkan active item berdasarkan pathname
   const getActiveItem = () => {
@@ -223,6 +226,74 @@ export function MainSidebar() {
     }
   }
 
+  // Handle rename chat
+  const handleRenameChat = async (chatId: string, newTitle: string) => {
+    if (!newTitle.trim()) {
+      setEditingChatId(null)
+      setEditingTitle("")
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/chat/history/${chatId}/title`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: newTitle.trim() }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to rename chat')
+      }
+
+      // Update local state
+      setChatHistory(prev => 
+        prev.map(chat => 
+          chat.id === chatId 
+            ? { ...chat, title: newTitle.trim() }
+            : chat
+        )
+      )
+
+      setEditingChatId(null)
+      setEditingTitle("")
+
+      toast({
+        title: "Success",
+        description: "Chat renamed successfully",
+      })
+    } catch (error) {
+      console.error('Failed to rename chat:', error)
+      toast({
+        title: "Error",
+        description: "Failed to rename chat",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Start editing chat title
+  const startEditing = (chatId: string, currentTitle: string) => {
+    setEditingChatId(chatId)
+    setEditingTitle(currentTitle)
+  }
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingChatId(null)
+    setEditingTitle("")
+  }
+
+  // Handle key press in edit input
+  const handleKeyPress = (e: React.KeyboardEvent, chatId: string) => {
+    if (e.key === 'Enter') {
+      handleRenameChat(chatId, editingTitle)
+    } else if (e.key === 'Escape') {
+      cancelEditing()
+    }
+  }
+
   useEffect(() => {
     loadChatHistory()
   }, [session, pathname])
@@ -268,7 +339,7 @@ export function MainSidebar() {
               onClick={handleNewChat}
               className="p-1 rounded-full hover:bg-gray-700 transition-colors"
               aria-label="New chat"
-              disabled={isLoading} // Disable saat loading
+              disabled={isLoading}
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -287,39 +358,81 @@ export function MainSidebar() {
                 {chatHistory.map((chat) => (
                   <SidebarMenuItem key={chat.id}>
                     <div className="flex items-center justify-between w-full group">
-                      <SidebarMenuButton
-                        onClick={() => router.push(`/dashboard?chat=${chat.id}`)}
-                        className="flex-1 hover-effect"
-                      >
-                        <span className="truncate">
-                          {chat.title || 'New Chat'}
-                        </span>
-                      </SidebarMenuButton>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button 
-                            className="p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            aria-label="Chat options"
-                            disabled={isLoading} // Disable saat loading
+                      {editingChatId === chat.id ? (
+                        // Edit mode
+                        <div className="flex items-center gap-2 flex-1 px-2">
+                          <Input
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => handleKeyPress(e, chat.id)}
+                            onBlur={() => handleRenameChat(chat.id, editingTitle)}
+                            className="h-8 text-sm"
+                            autoFocus
+                            maxLength={50}
+                          />
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleRenameChat(chat.id, editingTitle)}
+                              className="p-1 hover:bg-gray-700 rounded"
+                              aria-label="Save"
+                            >
+                              <Check className="h-3 w-3 text-green-500" />
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="p-1 hover:bg-gray-700 rounded"
+                              aria-label="Cancel"
+                            >
+                              <X className="h-3 w-3 text-red-500" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Normal mode
+                        <>
+                          <SidebarMenuButton
+                            onClick={() => router.push(`/dashboard?chat=${chat.id}`)}
+                            className="flex-1 hover-effect"
                           >
-                            {isLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <MoreVertical className="h-4 w-4" />
-                            )}
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteChat(chat.id)}
-                            className="text-red-500 focus:text-red-500"
-                            disabled={isLoading} // Disable saat loading
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            <span className="truncate">
+                              {chat.title || 'New Chat'}
+                            </span>
+                          </SidebarMenuButton>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button 
+                                className="p-1 transition-opacity" // HAPUS: opacity-0 group-hover:opacity-100
+                                aria-label="Chat options"
+                                disabled={isLoading}
+                              >
+                                {isLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <MoreVertical className="h-4 w-4" />
+                                )}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem
+                                onClick={() => startEditing(chat.id, chat.title || 'New Chat')}
+                                disabled={isLoading}
+                              >
+                                <Edit className="mr-2 h-4 w-4" />
+                                Rename
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteChat(chat.id)}
+                                className="text-red-500 focus:text-red-500"
+                                disabled={isLoading}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </>
+                      )}
                     </div>
                   </SidebarMenuItem>
                 ))}
