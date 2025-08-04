@@ -243,7 +243,7 @@ Instructions:
 - Focus on the most relevant information from the context`;
 
 // New streaming response function
-export async function getKnowledgeBaseResponseStream(query: string, chatHistory: string[] = []) {
+export async function getKnowledgeBaseResponseStream(query: string, chatHistory: string[] = [], chatId?: string) {
   // 1. Query ChromaDB terlebih dahulu (tetap blocking)
   const queryResults = await queryChromaDirectly(query, 5);
   
@@ -266,25 +266,68 @@ export async function getKnowledgeBaseResponseStream(query: string, chatHistory:
   return new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
+      let fullResponse = ""; // Buffer untuk menyimpan complete response
       
-      // Kirim sources metadata di awal (sebagai JSON line)
+      // Kirim sources metadata di awal
       const sourcesMetadata = JSON.stringify({ type: 'sources', data: sources });
       controller.enqueue(encoder.encode(`${sourcesMetadata}\n`));
       
-      // Stream AI response
-      const model = new ChatOllama({
-        baseUrl: process.env.OLLAMA_HOST || "http://localhost:11434",
-        model: process.env.OLLAMA_MODEL || "pentest-ai",
-        temperature: 0.3,
-      });
-      const stream = await model.stream([
-        new SystemMessage(SYSTEM_TEMPLATE.replace('{context}', context)),
-        new HumanMessage(query)
-      ]);
-      
-      for await (const chunk of stream) {
-        const textChunk = JSON.stringify({ type: 'content', data: chunk.content });
-        controller.enqueue(encoder.encode(`${textChunk}\n`));
+      try {
+        // Stream AI response
+        const model = new ChatOllama({
+          baseUrl: process.env.OLLAMA_HOST || "http://localhost:11434",
+          model: process.env.OLLAMA_MODEL || "pentest-ai",
+          temperature: 0.3,
+        });
+        
+        const stream = await model.stream([
+          new SystemMessage(SYSTEM_TEMPLATE.replace('{context}', context)),
+          new HumanMessage(query)
+        ]);
+        
+        for await (const chunk of stream) {
+          const content = chunk.content;
+          fullResponse += content; // Buffer content
+          
+          const textChunk = JSON.stringify({ type: 'content', data: content });
+          controller.enqueue(encoder.encode(`${textChunk}\n`));
+        }
+        
+        // ✅ TAMBAHKAN: Simpan ke database setelah streaming selesai
+        if (chatId && fullResponse.trim()) {
+          try {
+            await prisma.message.create({
+              data: {
+                chatId: chatId,
+                content: fullResponse,
+                role: 'ASSISTANT',
+                metadata: { sources: sources }
+              }
+            });
+            console.log('✅ Knowledge Base response saved to database');
+          } catch (dbError) {
+            console.error('❌ Failed to save Knowledge Base response:', dbError);
+          }
+        }
+        
+      } catch (error) {
+        console.error('❌ Streaming error:', error);
+        // Tetap simpan partial response jika ada
+        if (chatId && fullResponse.trim()) {
+          try {
+            await prisma.message.create({
+              data: {
+                chatId: chatId,
+                content: fullResponse + "\n\n[Stream interrupted]",
+                role: 'ASSISTANT',
+                metadata: { sources: sources }
+              }
+            });
+            console.log('✅ Partial Knowledge Base response saved to database');
+          } catch (dbError) {
+            console.error('❌ Failed to save partial response:', dbError);
+          }
+        }
       }
       
       controller.close();

@@ -256,6 +256,9 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
   setMessages(prev => [...prev, userMessage])
   setInput("")
 
+  // ✅ TAMBAHKAN: Variable untuk menyimpan chatId baru
+  let newChatId: string | null = null
+
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -276,6 +279,14 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
         return
       }
       throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    // ✅ UBAH: Simpan chatId tapi jangan update URL dulu
+    const responseChatId = response.headers.get('X-Chat-Id')
+    if (responseChatId && !currentChatId) {
+      newChatId = responseChatId
+      setCurrentChatId(responseChatId)
+      // JANGAN update URL di sini - tunggu sampai streaming selesai
     }
 
     if (useKnowledgeBase) {
@@ -320,7 +331,7 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
               const data = JSON.parse(line);
               
               if (data.type === 'sources') {
-                // Update sources immediately when received
+                // Update sources segera setelah diterima
                 sources = data.data;
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
@@ -432,6 +443,16 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
         }
       }
     }
+
+    // ✅ TAMBAHKAN: Update URL SETELAH streaming selesai
+    if (newChatId) {
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.set('chat', newChatId)
+      window.history.replaceState({}, '', newUrl.toString())
+      
+      console.log('✅ Chat URL updated to:', newUrl.toString())
+    }
+
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.log('🛑 Request aborted')

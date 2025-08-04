@@ -70,17 +70,18 @@ export async function POST(req: Request) {
       console.log('🔍 Using Knowledge Base mode...')
       
       try {
-        // Get streaming response dari knowledge base
+        // ✅ PERBAIKAN: Pass chatId untuk penyimpanan
         const stream = await getKnowledgeBaseResponseStream(
           userMessage.content,
-          []
+          [],
+          chat.id // Pass chat.id ke function
         );
         
-        // Return sebagai streaming response
         return new Response(stream, {
           headers: {
             'Content-Type': 'text/plain',
             'Transfer-Encoding': 'chunked',
+            'X-Chat-Id': chat.id,
           },
         });
         
