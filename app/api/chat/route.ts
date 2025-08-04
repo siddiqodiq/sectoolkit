@@ -7,7 +7,7 @@ import { ConversationChain } from 'langchain/chains'
 import { BufferMemory } from 'langchain/memory'
 import { ChatMessageHistory } from 'langchain/stores/message/in_memory'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
-import { getKnowledgeBaseResponse } from './utils/chroma'
+import { getKnowledgeBaseResponse, getKnowledgeBaseResponseStream } from './utils/chroma'
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
@@ -70,35 +70,23 @@ export async function POST(req: Request) {
       console.log('🔍 Using Knowledge Base mode...')
       
       try {
-        // getKnowledgeBaseResponse sekarang mengembalikan { response, sources }
-        const knowledgeData = await getKnowledgeBaseResponse(
+        // Get streaming response dari knowledge base
+        const stream = await getKnowledgeBaseResponseStream(
           userMessage.content,
-          [], // chatHistory if needed
-          session.user.id // Pass user ID for filtering
-        )
+          []
+        );
         
-        await prisma.message.create({
-          data: {
-            chatId: chat.id,
-            content: knowledgeData.response,
-            role: 'ASSISTANT',
-            metadata: { sources: knowledgeData.sources }
-          }
-        })
-
-        // SKIP saving sources to database for now
-        // TODO: Add proper database structure later
-
-        // Return JSON response with content and sources
-        return NextResponse.json({
-          content: knowledgeData.response,
-          sources: knowledgeData.sources,
-          chatId: chat.id
-        })
+        // Return sebagai streaming response
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/plain',
+            'Transfer-Encoding': 'chunked',
+          },
+        });
+        
       } catch (ragError) {
         console.error('❌ Knowledge base error:', ragError)
-        console.log('🔄 Falling back to normal AI mode...')
-        // Continue with normal processing if knowledge base fails
+        // Fallback ke mode normal
       }
     }
 

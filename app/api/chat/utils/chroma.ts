@@ -11,6 +11,7 @@ import {
 } from "@langchain/core/prompts";
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter'
 import { ChromaClient } from "chromadb";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 
 let vectorStore: Chroma | null = null;
 let embeddingFunction: OllamaEmbeddings | null = null;
@@ -226,6 +227,69 @@ Instructions:
     console.error("❌ Knowledge base error:", error);
     throw new Error(`Failed to query knowledge base: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+const SYSTEM_TEMPLATE = `You are a penetration testing expert assistant. Use the following context from the knowledge base to answer questions about cybersecurity and penetration testing.
+
+Context from knowledge base:
+{context}
+
+Instructions:
+- Use the provided context to supplement your knowledge
+- If the context doesn't contain relevant information, rely on your general cybersecurity knowledge
+- Provide practical and actionable advice
+- Be specific about tools, techniques, and methodologies when applicable
+- If you're uncertain about something, acknowledge the limitation
+- Focus on the most relevant information from the context`;
+
+// New streaming response function
+export async function getKnowledgeBaseResponseStream(query: string, chatHistory: string[] = []) {
+  // 1. Query ChromaDB terlebih dahulu (tetap blocking)
+  const queryResults = await queryChromaDirectly(query, 5);
+  
+  // 2. Extract sources segera setelah retrieval
+  const sources = Array.from(
+    new Set(queryResults.metadatas.map((meta: any) => meta?.source).filter(Boolean))
+  );
+  
+  // 3. Format context
+  const context = queryResults.documents
+    .map((doc, i) => {
+      const metadata = queryResults.metadatas[i];
+      const source = metadata?.source ? ` (Source: ${metadata.source})` : '';
+      const distance = queryResults.distances[i] ? ` (Relevance: ${(1 - queryResults.distances[i]).toFixed(2)})` : '';
+      return `Document ${i + 1}${source}${distance}:\n${doc}`;
+    })
+    .join("\n\n---\n\n");
+  
+  // 4. Return ReadableStream untuk response
+  return new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      
+      // Kirim sources metadata di awal (sebagai JSON line)
+      const sourcesMetadata = JSON.stringify({ type: 'sources', data: sources });
+      controller.enqueue(encoder.encode(`${sourcesMetadata}\n`));
+      
+      // Stream AI response
+      const model = new ChatOllama({
+        baseUrl: process.env.OLLAMA_HOST || "http://localhost:11434",
+        model: process.env.OLLAMA_MODEL || "pentest-ai",
+        temperature: 0.3,
+      });
+      const stream = await model.stream([
+        new SystemMessage(SYSTEM_TEMPLATE.replace('{context}', context)),
+        new HumanMessage(query)
+      ]);
+      
+      for await (const chunk of stream) {
+        const textChunk = JSON.stringify({ type: 'content', data: chunk.content });
+        controller.enqueue(encoder.encode(`${textChunk}\n`));
+      }
+      
+      controller.close();
+    }
+  });
 }
 
 // Test function with multiple approaches

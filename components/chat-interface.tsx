@@ -279,15 +279,111 @@ export function ChatInterface({ activeTool }: ChatInterfaceProps) {
     }
 
     if (useKnowledgeBase) {
-      // Handle knowledge base response (JSON format)
-      const data = await response.json();
+      // Handle knowledge base streaming response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader available");
+
+      let fullContent = "";
+      let sources: string[] = [];
+      const assistantMessageId = `assistant-${Date.now()}`;
       
+      // Initialize message with empty content
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: data.content, 
-        sources: data.sources, // Simpan sources dari response
-        id: `assistant-${Date.now()}` 
+        content: "", 
+        sources: [], // Initialize empty sources
+        id: assistantMessageId 
       }]);
+
+      const decoder = new TextDecoder();
+      let buffer = ""; // Buffer untuk menangani chunks yang tidak lengkap
+      
+      while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Decode chunk dan tambahkan ke buffer
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+          
+          // Split berdasarkan newline dan proses setiap line
+          const lines = buffer.split('\n');
+          
+          // Simpan line terakhir yang mungkin tidak lengkap
+          buffer = lines.pop() || "";
+          
+          for (const line of lines) {
+            if (!line.trim()) continue; // Skip empty lines
+            
+            try {
+              const data = JSON.parse(line);
+              
+              if (data.type === 'sources') {
+                // Update sources immediately when received
+                sources = data.data;
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, sources: sources }
+                    : msg
+                ));
+              } else if (data.type === 'content') {
+                // Append hanya data content, bukan seluruh line JSON
+                fullContent += data.data;
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: fullContent }
+                    : msg
+                ));
+              }
+            } catch (parseError) {
+              console.error('Error parsing JSON line:', parseError);
+              // Jika bukan JSON valid, treat sebagai plain text
+              fullContent += line;
+              setMessages(prev => prev.map(msg => 
+                msg.id === assistantMessageId 
+                  ? { ...msg, content: fullContent }
+                  : msg
+              ));
+            }
+          }
+          
+          if (isAtBottom && !scrollLockRef.current) {
+            scrollToBottom('auto');
+          }
+          
+        } catch (readError) {
+          if (readError instanceof Error && readError.name === 'AbortError') {
+            console.log('🛑 Stream aborted by user');
+            break;
+          }
+          throw readError;
+        }
+      }
+      
+      // Process remaining buffer content if any
+      if (buffer.trim()) {
+        try {
+          const data = JSON.parse(buffer);
+          if (data.type === 'content') {
+            fullContent += data.data;
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId 
+                ? { ...msg, content: fullContent }
+                : msg
+            ));
+          }
+        } catch (parseError) {
+          console.error('Error parsing remaining buffer content:', parseError);
+          // Treat as plain text
+          fullContent += buffer;
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: fullContent }
+              : msg
+          ));
+        }
+      }
     } else {
       // Original streaming handling
       const reader = response.body?.getReader()
