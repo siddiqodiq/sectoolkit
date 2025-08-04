@@ -12,6 +12,7 @@ import {
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter'
 import { ChromaClient } from "chromadb";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import prisma from "lib/db"
 
 let vectorStore: Chroma | null = null;
 let embeddingFunction: OllamaEmbeddings | null = null;
