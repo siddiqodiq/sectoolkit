@@ -157,20 +157,7 @@ export default function KnowledgeBasePage() {
     }
   }
 
-  const handlePreview = async (file: KnowledgeFile) => {
-    try {
-      const response = await fetch(`/api/knowledge/files/${file.id}/content`)
-      const content = await response.text()
-      setFileContent(content)
-      setPreviewFile(file)
-    } catch (error) {
-      toast({
-        title: "Preview failed",
-        description: "Failed to load file content",
-        variant: "destructive",
-      })
-    }
-  }
+  
 
   const handleIngestToDatabase = async () => {
     const readyFiles = files.filter(f => f.status === 'active' && !f.ingested)
@@ -514,14 +501,6 @@ export default function KnowledgeBasePage() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handlePreview(file)}
-                                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"
