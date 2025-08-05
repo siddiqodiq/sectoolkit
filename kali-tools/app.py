@@ -400,6 +400,8 @@ def stop_fuzzing():
 @app.route('/api/crawlurl', methods=['POST'])
 def crawl_url():
     try:
+        command = None  # Inisialisasi command
+        
         # Handle file upload
         if 'file' in request.files:
             file = request.files['file']
@@ -415,27 +417,8 @@ def crawl_url():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             
-            # Eksekusi paramspider langsung dengan file input
+            # ✅ Definisikan command untuk file
             command = ["paramspider", "-l", filepath, "-s"]
-            output = execute_paramspider(command)
-            results = parse_paramspider_output(output) if output else []
-            
-            # Cleanup file terlebih dahulu
-            try:
-                os.remove(filepath)
-            except FileNotFoundError:
-                pass
-            
-            # Tunggu sebentar sebelum cleanup results untuk memastikan proses selesai
-            import time
-            time.sleep(2)
-            cleanup_results()
-            
-            return jsonify({
-                "status": "success",
-                "results": results,
-                "count": len(results)
-            })
             
         # Handle single domain
         elif request.json and 'domain' in request.json:
@@ -444,11 +427,25 @@ def crawl_url():
             if not is_valid_domain(domain):
                 return jsonify({"error": "Invalid domain format"}), 400
                 
+            # ✅ Definisikan command untuk domain
             command = ["paramspider", "-d", domain, "-s"]
+            
+        else:
+            return jsonify({"error": "Either provide a file or single domain"}), 400
+
+        # ✅ Eksekusi command setelah didefinisikan
+        if command:
             output = execute_paramspider(command)
             results = parse_paramspider_output(output) if output else []
             
-            # Tunggu sebentar sebelum cleanup results untuk memastikan proses selesai
+            # Cleanup file jika ada
+            if 'filepath' in locals() and os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                except FileNotFoundError:
+                    pass
+            
+            # Tunggu sebentar sebelum cleanup results
             import time
             time.sleep(2)
             cleanup_results()
@@ -458,10 +455,10 @@ def crawl_url():
                 "results": results,
                 "count": len(results)
             })
-            
         else:
-            return jsonify({"error": "Either provide a file or single domain"}), 400
-            
+            # Ini seharusnya tidak terjadi jika logika di atas benar
+            return jsonify({"error": "Failed to construct command"}), 500
+
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         # Tunggu sebentar sebelum cleanup pada error handling
@@ -470,34 +467,40 @@ def crawl_url():
         cleanup_results()
         return jsonify({"error": str(e)}), 500
 
-def execute_paramspider(command):
-    """Execute paramspider and return live output"""
+# ✅ Sederhanakan fungsi execute_paramspider untuk menerima list command
+def execute_paramspider(command: list):
+    """Execute paramspider with venv activation and return live output"""
     try:
-        logger.debug(f"Executing: {' '.join(command)}")
+        paramspider_dir = os.path.expanduser('~/tools/ParamSpider')
         
-        # Pastikan directory results ada sebelum menjalankan paramspider
+        # ✅ Gabungkan aktivasi venv dengan command yang diterima
+        full_command = f"cd {paramspider_dir} && . .venv/bin/activate && {' '.join(command)}"
+        
+        logger.debug(f"Executing: {full_command}")
+        
+        # Pastikan directory results ada
         results_dir = "results"
         if not os.path.exists(results_dir):
             os.makedirs(results_dir, exist_ok=True)
             logger.debug(f"Created results directory: {results_dir}")
         
         process = subprocess.Popen(
-            command,
+            full_command,
+            shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
+            cwd=paramspider_dir
         )
         
-        # Tunggu proses selesai dengan timeout
         output, error = process.communicate(timeout=300)
         
         if process.returncode != 0:
             logger.error(f"Paramspider error: {error.strip()}")
             return None
         
-        # Tunggu sedikit untuk memastikan semua file operations selesai
         import time
         time.sleep(0.5)
         
