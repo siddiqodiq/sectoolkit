@@ -497,11 +497,22 @@ const TypingIndicator = () => (
     id: `tool-${Date.now()}`
   };
 
-  setMessages(prev => [...prev, toolMessage]);
+  // ✅ TAMBAHKAN: Bubble loading langsung muncul setelah tool message
+  const loadingMessage: Message = {
+    role: "assistant",
+    content: "",
+    id: `loading-${Date.now()}`,
+    isLoading: true
+  }
+  
+  setMessages(prev => [...prev, toolMessage, loadingMessage]);
   
   setIsLoading(true);
   streamingRef.current = true;
   abortControllerRef.current = new AbortController()
+
+  // ✅ TAMBAHKAN: Variable untuk track chatId baru
+  let newChatId: string | null = null
 
   try {
     const response = await fetch("/api/chat", {
@@ -518,35 +529,134 @@ const TypingIndicator = () => (
     });
 
     if (!response.ok) {
+      if (response.status === 499) {
+        console.log('🛑 Request was aborted')
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
+    // ✅ TAMBAHKAN: Extract chatId dari response header
+    const responseChatId = response.headers.get('X-Chat-Id')
+    if (responseChatId && !currentChatId) {
+      newChatId = responseChatId
+      setCurrentChatId(responseChatId)
+    }
+
     if (useKnowledgeBase) {
-      // Handle knowledge base response (non-streaming plain text)
-      const fullContent = await response.text() // Changed from response.json() to response.text()
+      // ✅ PERBAIKI: Handle knowledge base streaming response dengan parsing JSON
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader available");
+
+      let fullContent = "";
+      let sources: string[] = [];
+      const assistantMessageId = `assistant-${Date.now()}`;
       
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: fullContent, 
-        id: `assistant-${Date.now()}` 
-      }])
+      // ✅ REPLACE loading message dengan actual message
+      setMessages(prev => prev.map(msg => 
+        msg.id === loadingMessage.id 
+          ? { ...msg, id: assistantMessageId, isLoading: false, content: "" }
+          : msg
+      ));
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      
+      while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
+        try {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+          
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || "";
+          
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            
+            try {
+              const data = JSON.parse(line);
+              
+              if (data.type === 'sources') {
+                sources = data.data;
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, sources: sources }
+                    : msg
+                ));
+              } else if (data.type === 'content') {
+                fullContent += data.data;
+                setMessages(prev => prev.map(msg => 
+                  msg.id === assistantMessageId 
+                    ? { ...msg, content: fullContent }
+                    : msg
+                ));
+              }
+            } catch (parseError) {
+              console.error('Error parsing JSON line, treating as plain text:', parseError, line);
+              fullContent += line;
+              setMessages(prev => prev.map(msg => 
+                msg.id === assistantMessageId 
+                  ? { ...msg, content: fullContent }
+                  : msg
+              ));
+            }
+          }
+          
+          if (isAtBottom && !scrollLockRef.current) {
+            scrollToBottom('auto');
+          }
+          
+        } catch (readError) {
+          if (readError instanceof Error && readError.name === 'AbortError') {
+            console.log('🛑 Stream aborted by user');
+            break;
+          }
+          throw readError;
+        }
+      }
+      
+      // ✅ TAMBAHKAN: Process remaining buffer content if any
+      if (buffer.trim()) {
+        try {
+          const data = JSON.parse(buffer);
+          if (data.type === 'content') {
+            fullContent += data.data;
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId 
+                ? { ...msg, content: fullContent }
+                : msg
+            ));
+          }
+        } catch (parseError) {
+          fullContent += buffer;
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: fullContent }
+              : msg
+          ));
+        }
+      }
     } else {
-      // Original streaming handling
+      // ✅ PERBAIKI: Original streaming handling untuk mode Direct LLM
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
 
       let fullContent = "";
       const assistantMessageId = `assistant-${Date.now()}`;
       
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "", 
-        id: assistantMessageId 
-      }]);
+      // ✅ REPLACE loading message dengan actual message
+      setMessages(prev => prev.map(msg => 
+        msg.id === loadingMessage.id 
+          ? { ...msg, id: assistantMessageId, isLoading: false, content: "" }
+          : msg
+      ));
 
       const decoder = new TextDecoder();
       
-      while (streamingRef.current) {
+      while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
         try {
           const { done, value } = await reader.read();
           if (done) break;
@@ -565,6 +675,7 @@ const TypingIndicator = () => (
           }
         } catch (readError) {
           if (readError instanceof Error && readError.name === 'AbortError') {
+            console.log('🛑 Stream aborted by user');
             break
           }
           throw readError
@@ -572,18 +683,38 @@ const TypingIndicator = () => (
       }
     }
 
+    // ✅ TAMBAHKAN: Update URL setelah streaming selesai
+    if (newChatId) {
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.set('chat', newChatId)
+      window.history.replaceState({}, '', newUrl.toString())
+    }
+
     toast({
       title: "Tool results analyzed",
       description: "AI has completed analysis of the tool results.",
     });
+
   } catch (error) {
-    if (error instanceof Error && error.name !== 'AbortError') {
+    // ✅ PERBAIKI: Handle ERROR dengan loading message
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('🛑 Request aborted')
+      setMessages(prev => prev.filter(msg => msg.id !== loadingMessage.id))
+      toast({
+        title: "Analysis stopped",
+        description: "Tool result analysis was stopped successfully.",
+      })
+    } else {
       console.error("Error:", error);
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Failed to connect to your Ollama server (local). Ensure it is running and reachable, then try again.",
-        id: `error-${Date.now()}`
-      }]);
+      setMessages(prev => prev.map(msg => 
+        msg.id === loadingMessage.id 
+          ? { 
+              ...msg, 
+              content: "Failed to connect to your Ollama server (local). Ensure it is running and reachable, then try again.",
+              isLoading: false 
+            }
+          : msg
+      ));
       toast({
         title: "Error",
         description: "Failed to process tool results",
