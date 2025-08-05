@@ -318,7 +318,7 @@ const TypingIndicator = () => (
     }
 
     if (useKnowledgeBase) {
-      // Handle knowledge base streaming response
+      // ✅ PERBAIKI: Handle knowledge base streaming dengan fallback ke plain text
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
 
@@ -326,7 +326,7 @@ const TypingIndicator = () => (
       let sources: string[] = [];
       const assistantMessageId = `assistant-${Date.now()}`;
       
-      // ✅ REPLACE loading message dengan actual message
+      // Ganti loading message dengan bubble chat kosong yang siap diisi
       setMessages(prev => prev.map(msg => 
         msg.id === loadingMessage.id 
           ? { ...msg, id: assistantMessageId, isLoading: false, content: "" }
@@ -335,48 +335,55 @@ const TypingIndicator = () => (
 
       const decoder = new TextDecoder();
       let buffer = "";
-      
+      let isJsonStream = true; // Asumsikan format JSON sampai terjadi error parsing
+
       while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
         try {
           const { done, value } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
           
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || "";
-          
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            
-            try {
-              const data = JSON.parse(line);
-              
-              if (data.type === 'sources') {
-                sources = data.data;
+          if (isJsonStream) {
+            buffer += chunk;
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ""; // Simpan baris yang mungkin belum lengkap
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const data = JSON.parse(line);
+                // Jika berhasil, proses sebagai JSON
+                if (data.type === 'sources') {
+                  sources = data.data;
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId ? { ...msg, sources: sources } : msg
+                  ));
+                } else if (data.type === 'content') {
+                  fullContent += data.data;
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+                  ));
+                }
+              } catch (parseError) {
+                // GAGAL PARSING: Ini adalah titik fallback.
+                console.warn("Gagal parse JSON, beralih ke mode plain text.", { line });
+                isJsonStream = false;
+                // Baris yang gagal dan sisa buffer adalah plain text.
+                fullContent += line + '\n' + buffer;
+                buffer = ''; // Kosongkan buffer
                 setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessageId 
-                    ? { ...msg, sources: sources }
-                    : msg
+                  msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
                 ));
-              } else if (data.type === 'content') {
-                fullContent += data.data;
-                setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessageId 
-                    ? { ...msg, content: fullContent }
-                    : msg
-                ));
+                break; // Keluar dari for-loop, lanjutkan while-loop dalam mode plain text
               }
-            } catch (parseError) {
-              console.error('Error parsing JSON line:', parseError);
-              fullContent += line;
-              setMessages(prev => prev.map(msg => 
-                msg.id === assistantMessageId 
-                  ? { ...msg, content: fullContent }
-                  : msg
-              ));
             }
+          } else {
+            // Sekarang dalam mode plain text, langsung tambahkan chunk mentah
+            fullContent += chunk;
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+            ));
           }
           
           if (isAtBottom && !scrollLockRef.current) {
@@ -392,34 +399,20 @@ const TypingIndicator = () => (
         }
       }
       
-      // Process remaining buffer content if any
+      // Proses sisa konten di buffer
       if (buffer.trim()) {
-        try {
-          const data = JSON.parse(buffer);
-          if (data.type === 'content') {
-            fullContent += data.data;
-            setMessages(prev => prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, content: fullContent }
-                : msg
-            ));
-          }
-        } catch (parseError) {
-          fullContent += buffer;
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, content: fullContent }
-              : msg
-          ));
-        }
+        fullContent += buffer;
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+        ));
       }
     } else {
-      // Original streaming handling untuk mode Direct LLM
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error("No reader available")
+      // ✅ PERBAIKI: Original streaming handling untuk mode Direct LLM
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader available");
 
-      let fullContent = ""
-      const assistantMessageId = `assistant-${Date.now()}`
+      let fullContent = "";
+      const assistantMessageId = `assistant-${Date.now()}`;
       
       // ✅ REPLACE loading message dengan actual message
       setMessages(prev => prev.map(msg => 
@@ -428,28 +421,28 @@ const TypingIndicator = () => (
           : msg
       ));
 
-      const decoder = new TextDecoder()
+      const decoder = new TextDecoder();
       
       while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
         try {
-          const { done, value } = await reader.read()
-          if (done) break
+          const { done, value } = await reader.read();
+          if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true })
-          fullContent += chunk
+          const chunk = decoder.decode(value, { stream: true });
+          fullContent += chunk;
           
-              setMessages(prev => prev.map(msg => 
+          setMessages(prev => prev.map(msg => 
             msg.id === assistantMessageId 
               ? { ...msg, content: fullContent } 
               : msg
-          ))
+          ));
+          
           if (isAtBottom && !scrollLockRef.current) {
             scrollToBottom('auto')
           }
-          
         } catch (readError) {
           if (readError instanceof Error && readError.name === 'AbortError') {
-            console.log('🛑 Stream aborted by user')
+            console.log('🛑 Stream aborted by user');
             break
           }
           throw readError
@@ -544,7 +537,7 @@ const TypingIndicator = () => (
     }
 
     if (useKnowledgeBase) {
-      // ✅ PERBAIKI: Handle knowledge base streaming response dengan parsing JSON
+      // ✅ PERBAIKI: Handle knowledge base streaming dengan fallback ke plain text
       const reader = response.body?.getReader();
       if (!reader) throw new Error("No reader available");
 
@@ -552,7 +545,7 @@ const TypingIndicator = () => (
       let sources: string[] = [];
       const assistantMessageId = `assistant-${Date.now()}`;
       
-      // ✅ REPLACE loading message dengan actual message
+      // Ganti loading message dengan bubble chat kosong yang siap diisi
       setMessages(prev => prev.map(msg => 
         msg.id === loadingMessage.id 
           ? { ...msg, id: assistantMessageId, isLoading: false, content: "" }
@@ -561,48 +554,55 @@ const TypingIndicator = () => (
 
       const decoder = new TextDecoder();
       let buffer = "";
-      
+      let isJsonStream = true; // Asumsikan format JSON sampai terjadi error parsing
+
       while (streamingRef.current && !abortControllerRef.current?.signal.aborted) {
         try {
           const { done, value } = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
           
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || "";
-          
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            
-            try {
-              const data = JSON.parse(line);
-              
-              if (data.type === 'sources') {
-                sources = data.data;
+          if (isJsonStream) {
+            buffer += chunk;
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ""; // Simpan baris yang mungkin belum lengkap
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const data = JSON.parse(line);
+                // Jika berhasil, proses sebagai JSON
+                if (data.type === 'sources') {
+                  sources = data.data;
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId ? { ...msg, sources: sources } : msg
+                  ));
+                } else if (data.type === 'content') {
+                  fullContent += data.data;
+                  setMessages(prev => prev.map(msg => 
+                    msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+                  ));
+                }
+              } catch (parseError) {
+                // GAGAL PARSING: Ini adalah titik fallback.
+                console.warn("Gagal parse JSON, beralih ke mode plain text.", { line });
+                isJsonStream = false;
+                // Baris yang gagal dan sisa buffer adalah plain text.
+                fullContent += line + '\n' + buffer;
+                buffer = ''; // Kosongkan buffer
                 setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessageId 
-                    ? { ...msg, sources: sources }
-                    : msg
+                  msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
                 ));
-              } else if (data.type === 'content') {
-                fullContent += data.data;
-                setMessages(prev => prev.map(msg => 
-                  msg.id === assistantMessageId 
-                    ? { ...msg, content: fullContent }
-                    : msg
-                ));
+                break; // Keluar dari for-loop, lanjutkan while-loop dalam mode plain text
               }
-            } catch (parseError) {
-              console.error('Error parsing JSON line, treating as plain text:', parseError, line);
-              fullContent += line;
-              setMessages(prev => prev.map(msg => 
-                msg.id === assistantMessageId 
-                  ? { ...msg, content: fullContent }
-                  : msg
-              ));
             }
+          } else {
+            // Sekarang dalam mode plain text, langsung tambahkan chunk mentah
+            fullContent += chunk;
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+            ));
           }
           
           if (isAtBottom && !scrollLockRef.current) {
@@ -618,26 +618,12 @@ const TypingIndicator = () => (
         }
       }
       
-      // ✅ TAMBAHKAN: Process remaining buffer content if any
+      // Proses sisa konten di buffer
       if (buffer.trim()) {
-        try {
-          const data = JSON.parse(buffer);
-          if (data.type === 'content') {
-            fullContent += data.data;
-            setMessages(prev => prev.map(msg => 
-              msg.id === assistantMessageId 
-                ? { ...msg, content: fullContent }
-                : msg
-            ));
-          }
-        } catch (parseError) {
-          fullContent += buffer;
-          setMessages(prev => prev.map(msg => 
-            msg.id === assistantMessageId 
-              ? { ...msg, content: fullContent }
-              : msg
-          ));
-        }
+        fullContent += buffer;
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessageId ? { ...msg, content: fullContent } : msg
+        ));
       }
     } else {
       // ✅ PERBAIKI: Original streaming handling untuk mode Direct LLM
