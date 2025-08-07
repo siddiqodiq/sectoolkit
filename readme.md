@@ -1,5 +1,5 @@
 # 🕵️ Pungoe – Setup & Instalasi Docker
-EN [Read English Version](README.en.md)
+EN [Read English Version](readme.en.md)
 
 Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose. Aplikasi ini juga mengintegrasikan fitur AI (chatbot pentest) berbasis LLM melalui **Ollama**.
 
