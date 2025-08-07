@@ -1,4 +1,5 @@
 # 🕵️ Pungoe – Setup & Instalasi Docker
+EN [Read English Version](README.en.md)
 
 Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose. Aplikasi ini juga mengintegrasikan fitur AI (chatbot pentest) berbasis LLM melalui **Ollama**.
 
@@ -32,14 +33,14 @@ Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsi
 
 ### 🌐 Koneksi Internet
 
-* Disarankan menggunakan **VPN**, terutama pada jaringan terbatas seperti **WiFi PSSN**.
+* Disarankan menggunakan **VPN**, terutama pada jaringan terbatas seperti **WiFi Kampus**.
 * Pastikan port berikut **tidak bentrok** dengan aplikasi lain:
 
   * `3000` → Aplikasi utama
   * `5000` → Tools pentest (Flask)
   * `5432` → PostgreSQL
 
-> ❗ **Catatan penting:** Jika Anda menggunakan WiFi PSSN, Anda **wajib menggunakan VPN** agar dependensi dan koneksi yang dibutuhkan dapat berjalan dengan baik.
+> ❗ **Catatan penting:** Anda **wajib menggunakan VPN** agar dependensi dan koneksi yang dibutuhkan dapat berjalan dengan baik.
 
 ---
 
@@ -80,11 +81,10 @@ Docker akan mem-build dan menjalankan 3 layanan:
 * `app` → Frontend + backend (Next.js) + ChromaDB (vector store)
 * `kali-tools` → Tools uji penetrasi berbasis Flask (Kali Linux)
 
-> 📦 Folder `uploads/` dan `kali-tools/` akan otomatis di-*mount* ke dalam container `kali-tools`.
 
 #### 🔍 Cek Status Container
 
-* **GUI**: Cek lewat Docker Desktop.
+* **GUI**: Cek lewat Docker Desktop lewat menu container.
 * **CLI**: Jalankan `docker ps`.
 
 ---
