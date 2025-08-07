@@ -1,19 +1,43 @@
-Berikut adalah contoh isi README dalam **Bahasa Indonesia** untuk panduan instalasi dan penggunaan Docker Compose proyek **[pungoe](https://github.com/siddiqodiq/pungoe)**, lengkap dengan catatan penting mengenai penggunaan VPN dan integrasi manual `ollama` dan `pentest-ai`.
+# 🕵️ Pungoe – Setup & Instalasi Docker
+
+Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose. Aplikasi ini juga mengintegrasikan fitur AI (chatbot pentest) berbasis LLM melalui **Ollama**.
 
 ---
 
-# 🐘 Pungoe – Setup & Instalasi Docker
+## 🎬 Panduan Instalasi
 
-Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose.
+### 📺 Video Tutorial Singkat
 
-## 📋 Prasyarat
+👉 [Tonton di YouTube](https://youtu.be/zldi5sw7ACU)
 
-Pastikan Anda sudah menginstal:
+---
 
-* [Docker](https://www.docker.com/)
-* [Docker Compose](https://docs.docker.com/compose/)
-* [Git](https://git-scm.com/)
-* VPN aktif jika Anda menggunakan jaringan **WiFi PSSN**
+## 📋 Prasyarat Sistem
+
+### 💻 Sistem Operasi
+
+* Windows
+* Linux
+* macOS
+
+### 🔧 Perangkat Lunak
+
+| Software           | Fungsi                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| **Docker**         | Menyediakan lingkungan kontainerisasi untuk menjalankan aplikasi tanpa instalasi manual dependensi. |
+| **Docker Compose** | Menjalankan dan mengelola beberapa container sekaligus.                                             |
+| **Git**            | Untuk mengkloning repositori dari GitHub.                                                           |
+| **Ollama**         | Menjalankan model LLM lokal untuk fitur chatbot Pentest-AI.                                         |
+| **Web Browser**    | Untuk mengakses aplikasi di `localhost:3000`. Bebas menggunakan Chrome, Firefox, Edge, Safari, dll. |
+
+### 🌐 Koneksi Internet
+
+* Disarankan menggunakan **VPN**, terutama pada jaringan terbatas seperti **WiFi PSSN**.
+* Pastikan port berikut **tidak bentrok** dengan aplikasi lain:
+
+  * `3000` → Aplikasi utama
+  * `5000` → Tools pentest (Flask)
+  * `5432` → PostgreSQL
 
 > ❗ **Catatan penting:** Jika Anda menggunakan WiFi PSSN, Anda **wajib menggunakan VPN** agar dependensi dan koneksi yang dibutuhkan dapat berjalan dengan baik.
 
@@ -21,22 +45,20 @@ Pastikan Anda sudah menginstal:
 
 ## 🛠️ Langkah Instalasi
 
-### 1. Clone repositori
+### 1. Clone Repositori
 
 ```bash
 git clone https://github.com/siddiqodiq/pungoe.git
 cd pungoe
 ```
 
-### 2. Siapkan file environment
-
-Ubah nama file `.env.example` menjadi `.env`:
+### 2. Siapkan File Environment
 
 ```bash
 cp .env.example .env
 ```
 
-Edit nilai-nilai yang diperlukan di dalam `.env` sesuai kebutuhan Anda.
+Edit file `.env` sesuai kebutuhan, misalnya untuk konfigurasi database, endpoint tools, atau koneksi Ollama.
 
 ---
 
@@ -46,7 +68,7 @@ Edit nilai-nilai yang diperlukan di dalam `.env` sesuai kebutuhan Anda.
 docker compose build
 ```
 
-Setelah proses build selesai, jalankan container dengan:
+Kemudian jalankan container:
 
 ```bash
 docker compose up -d
@@ -54,134 +76,143 @@ docker compose up -d
 
 Docker akan mem-build dan menjalankan 3 layanan:
 
-* `postgres`: Database PostgreSQL
-* `app`: Aplikasi frontend + backend Next.js
-* `kali-tools`: Layanan tools uji penetrasi berbasis Flask + Kali Linux
+* `postgres` → Database PostgreSQL
+* `app` → Frontend + backend (Next.js) + ChromaDB (vector store)
+* `kali-tools` → Tools uji penetrasi berbasis Flask (Kali Linux)
 
-> 📦 Folder `uploads/` dan `kali-tools/` otomatis akan di-mount ke dalam kontainer `kali-tools`.
+> 📦 Folder `uploads/` dan `kali-tools/` akan otomatis di-*mount* ke dalam container `kali-tools`.
+
+#### 🔍 Cek Status Container
+
+* **GUI**: Cek lewat Docker Desktop.
+* **CLI**: Jalankan `docker ps`.
 
 ---
 
-Siap! Berikut pembaruan penjelasan di README (dalam Bahasa Indonesia) untuk penggunaan **Ollama** dan model **Pentest-AI** berbasis Hugging Face, **dengan perintah `ollama run` dan `ollama serve`**:
+## 🧠 Instalasi Pentest-AI & Ollama (Manual di Luar Docker)
 
----
+Fitur chatbot AI di Pungoe **tidak dijalankan dalam container**. Anda harus menginstal dan menjalankan **Ollama** secara manual di host machine.
 
-## 🧠 Pentest-AI dan Ollama (Manual) -> instalasi manual tanpa docker
+### 🔧 Langkah Instalasi Ollama
 
-Layanan **Ollama** dan model **Pentest-AI** tidak disertakan dalam Docker Compose. Anda perlu menginstalnya **secara manual di luar container**.
-
-### 🔧 Langkah Instalasi Model Pentest-AI
-
-1. **Install Ollama** terlebih dahulu sesuai sistem operasi Anda:
+1. **Install Ollama**:
    👉 [https://ollama.com/download](https://ollama.com/download)
 
-2. **Download model Pentest-AI dari Hugging Face** menggunakan perintah:
+2. **Unduh Model Pentest-AI** dari Hugging Face:
 
    ```bash
    ollama run hf.co/mav23/Pentest_AI-GGUF:Q5_0
    ```
 
-   Ini akan mengunduh dan menyiapkan model.
+   Opsional: Model kuantisasi lainnya tersedia di:
+   👉 [https://huggingface.co/mav23/Pentest\_AI-GGUF](https://huggingface.co/mav23/Pentest_AI-GGUF)
 
-3. Setelah model berhasil diunduh, jalankan **Ollama sebagai server**:
+3. **Unduh model untuk embedding** (digunakan oleh Chroma):
+
+   ```bash
+   ollama pull nomic-embed-text
+   ```
+
+4. **Jalankan Ollama sebagai server**:
 
    ```bash
    ollama serve
    ```
 
-   Server akan berjalan di `http://localhost:11434` secara default.
+> Server Ollama akan aktif di `http://localhost:11434`.
 
 ---
 
-### 🌐 Mengakses dari Dalam Docker 
+### 🌐 Akses Ollama dari Dalam Docker
 
-Karena **Ollama berjalan di luar container**, aplikasi di dalam Docker harus menggunakan alamat khusus ini untuk mengakses Ollama:
+Karena Ollama berjalan di host machine, gunakan alamat ini dari dalam container:
 
-```bash
+```
 http://host.docker.internal:11434
 ```
 
-> Pastikan port 11434 tidak diblokir oleh firewall dan model sudah aktif (`ollama serve` sedang berjalan).
+> Pastikan:
+>
+> * Port `11434` tidak diblokir firewall.
+> * Server Ollama aktif (`ollama serve` sedang berjalan).
+> * Model Pentest-AI sudah ter-load.
 
 ---
-
-Jika kamu ingin, saya juga bisa bantu membuat [script startup otomatis](f) untuk menjalankan `ollama serve` saat booting atau [template koneksi Ollama di kode Next.js](f).
-
 
 ## 📂 Struktur Layanan
 
 ```yaml
-- postgres (Port 5432)
-- app (Port 3000)
-- kali-tools (Port 5000)
+- postgres     (Port 5432)
+- app          (Port 3000)
+- kali-tools   (Port 5000)
 ```
 
 ---
 
 ## 🧪 Akses Aplikasi
 
-Setelah semua container berjalan, buka aplikasi Anda di:
+Setelah semua container berjalan dan Ollama aktif, buka:
 
-```
-http://localhost:3000
+* Aplikasi utama:
+
+  ```
+  http://localhost:3000
+  ```
+
+* API Tools Pentest (Flask):
+
+  ```
+  http://localhost:5000
+  ```
+
+---
+
+## 🐘 Error: PostgreSQL Authentication Failed
+
+<img src="https://github.com/user-attachments/assets/eb0126c9-a22f-47b4-b934-dc9fe23e0586" width="300" />
+
+Jika Anda melihat error seperti:
+
+```bash
+FATAL:  password authentication failed for user "postgres"
+DETAIL:  Connection matched pg_hba.conf line 100: "host all all all scram-sha-256"
 ```
 
-Endpoint API `kali-tools` dapat diakses di:
+Dan aplikasi gagal konek ke database, kemungkinan besar **PostgreSQL lokal Anda bentrok** dengan container PostgreSQL.
 
-```
-http://localhost:5000
-```
+### 🛠️ Solusi
+
+1. Buka `services.msc` (Win + R), cari layanan **PostgreSQL**.
+
+2. Klik kanan → **Stop** atau **Disable**.
+
+3. Jalankan ulang Docker:
+
+   ```bash
+   docker compose down
+   docker compose up --build
+   ```
+
+4. Jika masih error, hapus container:
+
+   ```bash
+   docker compose down -v
+   docker compose up --build
+   ```
 
 ---
 
 ## ❓ Troubleshooting
 
-* Pastikan VPN aktif saat menggunakan jaringan terbatas seperti WiFi kampus/PSSN.
-* Cek `.env` jika koneksi ke database atau tools gagal.
-* Untuk rebuild paksa:
+* Cek koneksi ke `host.docker.internal:11434` dari container.
+* Pastikan `.env` sesuai konfigurasi jaringan dan database.
+* Gunakan `docker logs <nama_container>` untuk melihat log error.
+* Rebuild paksa jika perlu:
 
   ```bash
   docker compose down -v
   docker compose up --build
   ```
 
-
-Berikut revisi lanjutan bagian dokumentasi yang menjelaskan solusi saat terjadi error pada koneksi ke PostgreSQL:
-
 ---
 
-## 🐘 Error: PostgreSQL Authentication Failed
-<img src="https://github.com/user-attachments/assets/eb0126c9-a22f-47b4-b934-dc9fe23e0586" width="300" />
-
-
-Jika Anda melihat error seperti berikut pada log saat menjalankan Docker:
-
-```bash
-pungoe_postgres    | FATAL:  password authentication failed for user "postgres"
-pungoe_postgres    | DETAIL:  Connection matched pg_hba.conf line 100: "host all all all scram-sha-256"
-```
-
-Namun aplikasi tidak dapat terkoneksi ke database, **kemungkinan besar PostgreSQL di sistem lokal Anda sedang berjalan sebagai layanan (service)** dan bentrok dengan container PostgreSQL.
-
-### 🛠️ Solusi:
-
-1. Tekan `Win + R`, lalu ketik:
-
-   ```
-   services.msc
-   ```
-2. Cari layanan bernama **PostgreSQL**.
-3. Klik kanan → **Stop** atau atur ke **Disabled** agar tidak otomatis berjalan.
-4. Jalankan ulang Docker Compose Anda:
-
-   ```bash
-   docker-compose down
-   docker-compose up --build
-   ```
-5. Jika masih error, hapus container dan build ulang
-Hal ini akan memastikan koneksi database mengarah ke PostgreSQL dalam Docker, bukan layanan lokal di Windows.
-
-
----
-
-Jika Anda butuh panduan tambahan seperti struktur `.env` atau cara testing koneksi antar service, beri tahu saya! Saya bisa bantu buat [contoh isi .env](f) atau [diagram arsitektur Docker](f).
