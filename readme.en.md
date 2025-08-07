@@ -224,6 +224,6 @@ But your app still fails to connect to the database, it is likely that **a local
 
 ## 🌍 Language
 
-* 🇮🇩 [Baca versi Bahasa Indonesia (default)](README.md)
+* 🇮🇩 [Baca versi Bahasa Indonesia (default)](readme.md)
 
 ---
