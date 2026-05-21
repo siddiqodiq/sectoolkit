@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-ta_odiq}
+      POSTGRES_DB: ${DB_NAME:-sectoolkit}
     ports:
       - "5432:5432"
     volumes:
@@ -39,7 +39,7 @@ services:
       STUDIO_EMBED_BUILD: false
       OLLAMA_HOST: http://host.docker.internal:11434
       OLLAMA_MODEL: pentest-ai
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-ta_odiq}?schema=public
+      DATABASE_URL: postgresql://${DB_USER:-sdqodq}:${DB_PASSWORD:-pusdatinsectoolkit}@postgres:5432/${DB_NAME:-sectoolkit}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       KALI_TOOLS_URL: http://kali-tools:5000
@@ -62,7 +62,7 @@ services:
       - ./uploads:/app/uploads
     environment:
       FLASK_ENV: production
-      POSTGRES_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-ta_odiq}
+      POSTGRES_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-sectoolkit}
     networks:
       - pungoe_network
     restart: unless-stopped

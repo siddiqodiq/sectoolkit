@@ -1,0 +1,9 @@
+allowBuilds:
+  '@prisma/client': false
+  '@prisma/engines': false
+  esbuild: false
+  onnxruntime-node: false
+  prisma: false
+  protobufjs: false
+  sharp: false
+  tesseract.js: false
