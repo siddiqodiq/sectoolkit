@@ -1,11 +1,12 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
-const modalVariants = cva("fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-20", {
+const modalVariants = cva("fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-20", {
   variants: {
     variant: {
       default: "",
@@ -33,6 +34,11 @@ export function Modal({
   ...props
 }: ModalProps) {
   const [isOpen, setIsOpen] = React.useState(open)
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   React.useEffect(() => {
     setIsOpen(open)
@@ -56,9 +62,9 @@ export function Modal({
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
-  return (
+  return createPortal(
     <div className={cn(modalVariants({ variant }), className)} {...props}>
       <div
         className="absolute inset-0 bg-black/50"
@@ -71,6 +77,7 @@ export function Modal({
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
