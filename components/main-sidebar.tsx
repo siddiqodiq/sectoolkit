@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Shield, Settings, LogOut, User, Bell, Moon, HelpCircle, Boxes } from "lucide-react"
+import { Shield, Settings, LogOut, User, Bell, Moon, HelpCircle, Boxes, Database } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -80,6 +80,13 @@ export function MainSidebar() {
       icon: Boxes,
       path: "/tools", 
       onClick: () => router.push("/tools")
+    },
+    { 
+      id: "database", 
+      label: "Database", 
+      icon: Database,
+      path: "/database",
+      onClick: () => router.push("/database")
     }
   ]
 
