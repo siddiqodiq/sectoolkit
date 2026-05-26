@@ -22,7 +22,7 @@ import { PayloadTable } from "@/components/database/payload-table"
 import { WordlistTable } from "@/components/database/wordlist-table"
 import { SearchHeader } from "@/components/database/search-header"
 import { useRouter } from "next/navigation"
-import router from "next/router"
+import { MainNavbar } from "@/components/main-navbar"
 
 
 export default function SecurityDatabasePage() {
@@ -53,19 +53,13 @@ export default function SecurityDatabasePage() {
   ]
 
   return (
-    <div className="min-h-screen p-4 md:p-8 bg-background">
-      <div className="max-w-7xl mx-auto w-full">
-        <Button 
-          variant="outline" 
-          onClick={() => router.push("/dashboard")} // Update disini
-          className="mb-4 flex items-center gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Dashboard
-        </Button>
-        <SearchHeader />
-        
-        <Tabs defaultValue="cve" className="w-full">
+    <div className="flex flex-col min-h-screen w-full bg-[#121212] overflow-hidden">
+      <MainNavbar />
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-7xl mx-auto w-full">
+          <SearchHeader />
+          
+          <Tabs defaultValue="cve" className="w-full">
           <TabsList className="grid grid-cols-3 w-full md:w-[400px] glass-effect">
             <TabsTrigger value="cve" className="flex items-center gap-2">
               <Shield className="h-4 w-4" /> <span className="hidden sm:inline">CVE Database</span>
@@ -151,7 +145,8 @@ export default function SecurityDatabasePage() {
               </CardFooter>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        </div>
       </div>
     </div>
   )

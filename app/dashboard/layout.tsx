@@ -2,9 +2,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "../../app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { SidebarProvider } from "@/components/ui/sidebar"
 import { RouteGuard } from "@/components/route-guard"
-import { SidebarEventsListener } from "@/components/sidebar-event-listener"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -27,11 +25,7 @@ export default function DashboardLayout({
     // Remove the html tag here - it should only be in the root layout
     <div className={`${inter.className} bg-black`}>
       <RouteGuard>
-        <SidebarProvider>
-          {/* Tambahkan listener untuk event sidebar */}
-          <SidebarEventsListener />
-          {children}
-        </SidebarProvider>
+        {children}
       </RouteGuard>
     </div>
   )

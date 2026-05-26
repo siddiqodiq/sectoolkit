@@ -4,9 +4,7 @@
 import { useState, useMemo } from "react"
 import { tools, getCategoryLabel } from "@/lib/tools"
 import { ToolModal } from "@/components/tool-modal"
-import { MainSidebar } from "@/components/main-sidebar"
-import { SidebarInset } from "@/components/ui/sidebar"
-import { Menu } from "lucide-react"
+import { MainNavbar } from "@/components/main-navbar"
 import { Button } from "@/components/ui/button"
 import {
   Scan,
@@ -33,8 +31,6 @@ import {
   Heading
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { toast } from "@/components/ui/use-toast"
-
 
 export default function ToolsPage() {
   const [activeTool, setActiveTool] = useState<string | null>(null)
@@ -43,7 +39,7 @@ export default function ToolsPage() {
 
   // Handle ketika tool dipilih
   const handleToolSelect = (toolId: string) => {
-    router.push(`/dashboard?tool=${toolId}`)
+    router.push(`/tools?tool=${toolId}`)
   }
 
   // Map tool names to icons
@@ -112,37 +108,25 @@ export default function ToolsPage() {
   }, [filter])
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#212121]">
-      <MainSidebar />
-      <SidebarInset className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden relative">
-          {/* Mobile menu button */}
-          <div className="md:hidden fixed top-4 left-4 z-40">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:bg-gray-700"
-              onClick={() => document.dispatchEvent(new CustomEvent('toggle-left-sidebar'))}
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
+    <div className="flex flex-col h-screen w-full bg-[#121212] overflow-hidden">
+      <MainNavbar />
+      
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
+          
+          <div className="space-y-4 py-4 border-b border-gray-800">
+            <h1 className="text-3xl font-bold gradient-text">Penetration Testing Tools</h1>
+            <p className="text-gray-400">
+              {filter === "all" 
+                ? "Explore powerful tools to elevate your penetration testing workflow."
+                : `Discover ${getCategoryLabel(filter)} tools for your pentesting needs.`
+              }
+            </p>
           </div>
 
-          <div className="flex flex-col h-full overflow-hidden">
-            {/* Header */}
-            <div className="border-b border-gray-800 p-4">
-              <h1 className="text-2xl font-bold gradient-text">Penetration Testing Tools</h1>
-              <p className="text-gray-400 mt-1">
-                {filter === "all" 
-                  ? "Explore powerful tools to elevate your penetration testing workflow."
-                  : `Discover ${getCategoryLabel(filter)} tools for your pentesting needs.`
-                }
-              </p>
-            </div>
-
+          <div className="flex flex-col h-full">
             {/* Filter buttons */}
-            <div className="flex gap-2 p-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 pb-6 overflow-x-auto scrollbar-hide">
               <button
                 onClick={() => setFilter("all")}
                 className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
@@ -172,7 +156,7 @@ export default function ToolsPage() {
             </div>
 
             {/* Tools grid */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div>
               {filter === "all" ? (
                 // Tampilan berdasarkan kategori untuk "all"
                 Object.entries(groupedTools).map(([category, categoryTools]) => (
@@ -187,17 +171,17 @@ export default function ToolsPage() {
                           <div
                             key={tool.id}
                             onClick={() => handleToolSelect(tool.id)}
-                            className="bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg hover:scale-105 group"
+                            className="bg-gray-800/40 hover:bg-gray-700/60 border border-gray-700/50 rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 group"
                           >
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="p-2 rounded-md bg-gray-700/50 group-hover:bg-gray-600/50 transition-colors">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="p-2.5 rounded-lg bg-gray-700/50 group-hover:bg-gray-600/50 transition-colors">
                                 <IconComponent className="h-6 w-6 text-gray-300" />
                               </div>
-                              <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(tool.status)}`}>
+                              <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${getStatusColor(tool.status)}`}>
                                 {tool.status}
                               </span>
                             </div>
-                            <h3 className="font-semibold text-gray-200 mb-2">
+                            <h3 className="font-semibold text-gray-100 mb-2">
                               {tool.name}
                             </h3>
                             <p className="text-sm text-gray-400 line-clamp-2">
@@ -218,17 +202,17 @@ export default function ToolsPage() {
                       <div
                         key={tool.id}
                         onClick={() => handleToolSelect(tool.id)}
-                        className="bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-lg p-4 cursor-pointer transition-all hover:shadow-lg hover:scale-105 group"
+                        className="bg-gray-800/40 hover:bg-gray-700/60 border border-gray-700/50 rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 group"
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="p-2 rounded-md bg-gray-700/50 group-hover:bg-gray-600/50 transition-colors">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-2.5 rounded-lg bg-gray-700/50 group-hover:bg-gray-600/50 transition-colors">
                             <IconComponent className="h-6 w-6 text-gray-300" />
                           </div>
-                          <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(tool.status)}`}>
+                          <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${getStatusColor(tool.status)}`}>
                             {tool.status}
                           </span>
                         </div>
-                        <h3 className="font-semibold text-gray-200 mb-2">
+                        <h3 className="font-semibold text-gray-100 mb-2">
                           {tool.name}
                         </h3>
                         <p className="text-sm text-gray-400 line-clamp-2">
@@ -241,8 +225,14 @@ export default function ToolsPage() {
               )}
             </div>
           </div>
+          
+          <ToolModal 
+            toolId={activeTool}
+            isOpen={false} // Tidak dipakai di sini, akan redirect ke dashboard
+            onClose={() => {}}
+          />
         </div>
-      </SidebarInset>
+      </div>
     </div>
   )
 }

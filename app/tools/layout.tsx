@@ -1,7 +1,7 @@
 // app/tools/layout.tsx
 
 import { RouteGuard } from '@/components/route-guard'
-import { SidebarProvider } from '@/components/ui/sidebar'
+
 import type { Metadata } from "next"
 import "../../app/globals.css"
 
@@ -21,10 +21,8 @@ export default function ToolsLayout({
   children: React.ReactNode
 }) {
   return (
-    <SidebarProvider>
-      <RouteGuard requireAuth>
-        {children}
-      </RouteGuard>
-    </SidebarProvider>
+    <RouteGuard requireAuth>
+      {children}
+    </RouteGuard>
   )
 }

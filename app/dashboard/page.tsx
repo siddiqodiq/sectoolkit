@@ -1,19 +1,39 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { MainSidebar } from "@/components/main-sidebar"
-import { ToolsSidebar } from "@/components/tools-sidebar"
+import { useState, useEffect, useMemo } from "react"
+import { MainNavbar } from "@/components/main-navbar"
 import { ToolModal } from "@/components/tool-modal"
-import { SidebarInset } from "@/components/ui/sidebar"
-import { Menu, Wrench } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useSearchParams, usePathname, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ShieldAlert, Server, Boxes } from "lucide-react"
+import { useSearchParams, useRouter } from 'next/navigation'
+import { tools, getCategoryLabel } from "@/lib/tools"
+import {
+  Scan,
+  FileSearch,
+  Braces,
+  Database,
+  Globe,
+  Search,
+  Shield,
+  AlertTriangle,
+  Server,
+  Code,
+  Map,
+  Pickaxe,
+  Sword,
+  FolderClock,
+  DoorOpen,
+  Antenna,
+  Calculator,
+  Pointer,
+  Cctv,
+  ArrowLeftRight,
+  FolderTree,
+  Heading
+} from "lucide-react"
 
 export default function Home() {
   const [activeTool, setActiveTool] = useState<string | null>(null)
   const [isToolModalOpen, setIsToolModalOpen] = useState(false)
+  const [filter, setFilter] = useState<string>("all")
   const searchParams = useSearchParams()
   const router = useRouter()
   const toolFromUrl = searchParams.get('tool')
@@ -40,90 +60,187 @@ export default function Home() {
     }
   }
 
+  // Map tool names to icons
+  const getToolIcon = (toolName: string) => {
+    const iconMap: Record<string, any> = {
+      "Whois Lookup": Search,
+      "Google Dork": Pointer,
+      "Subdomain Finder": Globe,
+      "WAF Detector": Shield,
+      "Port Scanner": Scan,
+      "URL Crawler [FUZZ]": Pickaxe,
+      "Deep URL Crawler": Sword,
+      "Wayback Machine Dorking": FolderClock,
+      "Web Parameter Enumerator": Map,
+      "URL Fuzzer": FileSearch,
+      "CORS Misc Scanner": Antenna,
+      "Open Redirect Exploiter": DoorOpen,
+      "Nuclei Scan": AlertTriangle,
+      Nikto: Server,
+      "XSS Exploiter": Code,
+      "SQL Map": Database,
+      "Decoder/Encoder": ArrowLeftRight,
+      "JWT Debugger": Braces,
+      "CVSS Scoring": Calculator,
+      "DNS Recon": Cctv,
+      "LFI Exploiter": FolderTree,
+      "Subdomain Takeover": Braces,
+      "Security Headers Checker": Heading,
+    }
+
+    return iconMap[toolName] || Braces
+  }
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Available":
+        return "bg-green-500/20 text-green-400"
+      case "Under Development":
+        return "bg-yellow-500/20 text-yellow-400"
+      case "Maintenance":
+        return "bg-red-500/20 text-red-400"
+      default:
+        return "bg-gray-500/20 text-gray-400"
+    }
+  }
+
+  // Filter tools by category
+  const filteredTools = useMemo(() => {
+    return filter === "all" 
+      ? tools 
+      : tools.filter(tool => tool.category === filter)
+  }, [filter])
+
+  // Group filtered tools by category - hanya untuk tampilan "all"
+  const groupedTools = useMemo(() => {
+    if (filter !== "all") {
+      return {}
+    }
+    
+    return tools.reduce((acc, tool) => {
+      if (!acc[tool.category]) acc[tool.category] = []
+      acc[tool.category].push(tool)
+      return acc
+    }, {} as Record<string, typeof tools>)
+  }, [filter])
+
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#212121]">
-      <MainSidebar />
-      <SidebarInset className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden relative p-8">
+    <div className="flex flex-col h-screen w-full bg-[#121212] overflow-hidden">
+      <MainNavbar />
+      
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
           
-          {/* Mobile menu buttons */}
-          <div className="md:hidden fixed top-4 left-4 z-40">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:bg-gray-700"
-              onClick={() => document.dispatchEvent(new CustomEvent('toggle-left-sidebar'))}
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
+          <div className="space-y-4 text-center py-8">
+            <h1 className="text-4xl font-bold tracking-tight gradient-text sm:text-5xl">
+              Pungoe Pentest Toolkit
+            </h1>
+            <p className="text-lg leading-8 text-gray-400 max-w-2xl mx-auto">
+              Comprehensive security testing and vulnerability assessment tools.
+              Select a tool below to start scanning.
+            </p>
           </div>
 
-          <div className="md:hidden fixed top-4 right-4 z-40">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:bg-gray-700"
-              onClick={() => document.dispatchEvent(new CustomEvent('toggle-right-sidebar'))}
-            >
-              <Wrench className="h-5 w-5" />
-              <span className="sr-only">Toggle Tools</span>
-            </Button>
-          </div>
-
-          <div className="flex flex-col items-center justify-center h-full max-w-4xl mx-auto space-y-8 text-center">
-            <div className="space-y-4">
-              <h1 className="text-4xl font-bold tracking-tight gradient-text sm:text-6xl">
-                Pungoe Pentest Toolkit
-              </h1>
-              <p className="text-lg leading-8 text-gray-400 max-w-2xl mx-auto">
-                Comprehensive security testing and vulnerability assessment tools.
-                Use the tools sidebar to access specialized scanning functions.
-              </p>
+          <div className="flex flex-col h-full">
+            {/* Filter buttons */}
+            <div className="flex gap-2 pb-6 overflow-x-auto scrollbar-hide">
+              <button
+                onClick={() => setFilter("all")}
+                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+                  filter === "all" 
+                    ? "bg-gray-700 text-white" 
+                    : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                }`}
+              >
+                All Tools 
+              </button>
+              {Array.from(new Set(tools.map(tool => tool.category))).map(category => {
+                const categoryCount = tools.filter(tool => tool.category === category).length
+                return (
+                  <button
+                    key={category}
+                    onClick={() => setFilter(category)}
+                    className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+                      filter === category 
+                        ? "bg-gray-700 text-white" 
+                        : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                    }`}
+                  >
+                    {getCategoryLabel(category)}
+                  </button>
+                )
+              })}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-8">
-              <Card className="bg-gray-800/50 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-gray-200">
-                    <ShieldAlert className="h-5 w-5 text-red-400" />
-                    Vulnerability Scan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-400">
-                    Scan web applications for common vulnerabilities like XSS, SQLi, and misconfigurations.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gray-800/50 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-gray-200">
-                    <Server className="h-5 w-5 text-blue-400" />
-                    Infrastructure
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-400">
-                    Analyze server configurations, open ports, and potential infrastructure weaknesses.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gray-800/50 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-gray-200">
-                    <Boxes className="h-5 w-5 text-green-400" />
-                    Reconnaissance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-gray-400">
-                    Gather intelligence about target domains, subdomains, and exposed assets.
-                  </CardDescription>
-                </CardContent>
-              </Card>
+            {/* Tools grid */}
+            <div>
+              {filter === "all" ? (
+                // Tampilan berdasarkan kategori untuk "all"
+                Object.entries(groupedTools).map(([category, categoryTools]) => (
+                  <div key={category} className="mb-8">
+                    <h2 className="text-xl font-bold mb-4 text-gray-200">
+                      {getCategoryLabel(category)}
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {categoryTools.map(tool => {
+                        const IconComponent = getToolIcon(tool.name)
+                        return (
+                          <div
+                            key={tool.id}
+                            onClick={() => handleToolSelect(tool.id)}
+                            className="bg-gray-800/40 hover:bg-gray-700/60 border border-gray-700/50 rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 group"
+                          >
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="p-2.5 rounded-lg bg-gray-700/50 group-hover:bg-gray-600/50 transition-colors">
+                                <IconComponent className="h-6 w-6 text-gray-300" />
+                              </div>
+                              <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${getStatusColor(tool.status)}`}>
+                                {tool.status}
+                              </span>
+                            </div>
+                            <h3 className="font-semibold text-gray-100 mb-2">
+                              {tool.name}
+                            </h3>
+                            <p className="text-sm text-gray-400 line-clamp-2">
+                              {tool.description}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                // Tampilan grid untuk kategori tertentu
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {filteredTools.map(tool => {
+                    const IconComponent = getToolIcon(tool.name)
+                    return (
+                      <div
+                        key={tool.id}
+                        onClick={() => handleToolSelect(tool.id)}
+                        className="bg-gray-800/40 hover:bg-gray-700/60 border border-gray-700/50 rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 group"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="p-2.5 rounded-lg bg-gray-700/50 group-hover:bg-gray-600/50 transition-colors">
+                            <IconComponent className="h-6 w-6 text-gray-300" />
+                          </div>
+                          <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full ${getStatusColor(tool.status)}`}>
+                            {tool.status}
+                          </span>
+                        </div>
+                        <h3 className="font-semibold text-gray-100 mb-2">
+                          {tool.name}
+                        </h3>
+                        <p className="text-sm text-gray-400 line-clamp-2">
+                          {tool.description}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
           
@@ -133,11 +250,7 @@ export default function Home() {
             onClose={() => setIsToolModalOpen(false)}
           />
         </div>
-      </SidebarInset>
-      <ToolsSidebar 
-        onSelectTool={handleToolSelect} 
-        activeTool={activeTool} 
-      />
+      </div>
     </div>
   )
 }

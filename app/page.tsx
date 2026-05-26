@@ -18,7 +18,7 @@ export default function LandingPage() {
 
    const handleGetStarted = () => {
     if (status === 'authenticated') {
-      router.push('/dashboard')
+      router.push('/tools')
     } else {
       router.push('/login')
     }

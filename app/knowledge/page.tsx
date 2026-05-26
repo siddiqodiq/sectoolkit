@@ -14,8 +14,7 @@ import { Upload, Trash2, FileText, Brain, Plus, Eye, Zap, RefreshCw, CheckCircle
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MainSidebar } from "@/components/main-sidebar"
-import { SidebarInset } from "@/components/ui/sidebar"
+import { MainNavbar } from "@/components/main-navbar"
 
 interface KnowledgeFile {
   id: string
@@ -268,23 +267,11 @@ export default function KnowledgeBasePage() {
 
   return (
     // ✅ Update layout structure to match tools page
-    <div className="flex h-screen w-full overflow-hidden bg-[#212121]">
-      <MainSidebar />
-      <SidebarInset className="flex flex-1 overflow-hidden">
-        <div className="flex flex-1 flex-col overflow-hidden relative">
-          {/* Mobile menu button */}
-          <div className="md:hidden fixed top-4 left-4 z-40">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:bg-gray-700"
-              onClick={() => document.dispatchEvent(new CustomEvent('toggle-left-sidebar'))}
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle Menu</span>
-            </Button>
-          </div>
-
+    <div className="flex flex-col h-screen w-full bg-[#121212] overflow-hidden">
+      <MainNavbar />
+      
+      <div className="flex-1 overflow-y-auto w-full">
+        <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
           <div className="flex flex-col h-full overflow-hidden">
             {/* Header */}
             <div className="border-b border-gray-800 p-4">
@@ -566,7 +553,7 @@ export default function KnowledgeBasePage() {
             </div>
           </div>
         </div>
-      </SidebarInset>
+      </div>
 
       {/* Preview Dialog */}
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>

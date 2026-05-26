@@ -36,7 +36,7 @@ const handleLogin = async () => {
       email,
       password,
       redirect: false,
-      callbackUrl: '/dashboard'
+      callbackUrl: '/tools'
     })
 
     if (result?.error) {
