@@ -1,5 +1,5 @@
 import { RouteGuard } from '@/components/route-guard'
-import './database.css'
+import '../../app/globals.css'
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {

@@ -126,7 +126,7 @@ export default function Home() {
   }, [filter])
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#121212] overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
       <MainNavbar />
       
       <div className="flex-1 overflow-y-auto w-full">

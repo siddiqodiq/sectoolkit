@@ -53,7 +53,7 @@ export function MainNavbar() {
   ]
 
   return (
-    <nav className="border-b border-gray-800 bg-[#151515] sticky top-0 z-50">
+    <nav className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left side: Logo & Navigation */}
@@ -140,7 +140,7 @@ export function MainNavbar() {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#1a1a1a] border-b border-gray-800">
+        <div className="md:hidden bg-card border-b border-border">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
             {menuItems.map((item) => {
               const isActive = pathname === item.path

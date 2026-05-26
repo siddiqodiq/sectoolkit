@@ -53,7 +53,7 @@ export default function SecurityDatabasePage() {
   ]
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-[#121212] overflow-hidden">
+    <div className="flex flex-col min-h-screen w-full bg-background overflow-hidden">
       <MainNavbar />
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-7xl mx-auto w-full">

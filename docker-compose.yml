@@ -30,7 +30,6 @@ services:
         condition: service_started
     ports:
       - "3000:3000"
-      - "8000:8000"
       - "5555:5555"
     volumes:
       - ./uploads:/app/uploads
