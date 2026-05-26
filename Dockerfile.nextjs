@@ -24,12 +24,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat-traditional \
     curl \
-    python3 \
-    python3-pip \
     && rm -rf /var/lib/apt/lists/*
-
-# ✅ Install ChromaDB menggunakan pip
-RUN pip install chromadb --break-system-packages
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -45,12 +40,10 @@ RUN pnpm install --prod --frozen-lockfile
 
 RUN pnpm prisma generate
 COPY ./test ./test
-COPY ./db ./db
 
 ENV STUDIO_EMBED_BUILD=false
 
 EXPOSE 3000
-EXPOSE 8000
 
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh

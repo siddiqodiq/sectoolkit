@@ -33,18 +33,13 @@ services:
       - "8000:8000"
       - "5555:5555"
     volumes:
-      - ./db/chroma_langchain_db:/app/db/chroma_langchain_db
       - ./uploads:/app/uploads
     environment:
       STUDIO_EMBED_BUILD: false
-      OLLAMA_HOST: http://host.docker.internal:11434
-      OLLAMA_MODEL: pentest-ai
       DATABASE_URL: postgresql://${DB_USER:-sdqodq}:${DB_PASSWORD:-pusdatinsectoolkit}@postgres:5432/${DB_NAME:-sectoolkit}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       KALI_TOOLS_URL: http://kali-tools:5000
-      CHROMA_HOST: localhost
-      CHROMA_PORT: 8000
     networks:
       - pungoe_network
     restart: unless-stopped

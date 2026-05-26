@@ -1,7 +1,7 @@
 # 🕵️ Pungoe – Setup & Instalasi Docker
 EN [Read English Version](readme.en.md)
 
-Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose. Aplikasi ini juga mengintegrasikan fitur AI (chatbot pentest) berbasis LLM melalui **Ollama**.
+Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose.
 
 ---
 ## 🎬 Video Overview
@@ -31,7 +31,6 @@ Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsi
 | **Docker**         | Menyediakan lingkungan kontainerisasi untuk menjalankan aplikasi tanpa instalasi manual dependensi. |
 | **Docker Compose** | Menjalankan dan mengelola beberapa container sekaligus.                                             |
 | **Git**            | Untuk mengkloning repositori dari GitHub.                                                           |
-| **Ollama**         | Menjalankan model LLM lokal untuk fitur chatbot Pentest-AI.                                         |
 | **Web Browser**    | Untuk mengakses aplikasi di `localhost:3000`. Bebas menggunakan Chrome, Firefox, Edge, Safari, dll. |
 
 ### 🌐 Koneksi Internet
@@ -62,7 +61,7 @@ cd pungoe
 cp .env.example .env
 ```
 
-Edit file `.env` sesuai kebutuhan, misalnya untuk konfigurasi database, endpoint tools, atau koneksi Ollama.
+Edit file `.env` sesuai kebutuhan, misalnya untuk konfigurasi database atau endpoint tools.
 
 ---
 
@@ -81,7 +80,7 @@ docker compose up -d
 Docker akan mem-build dan menjalankan 3 layanan:
 
 * `postgres` → Database PostgreSQL
-* `app` → Frontend + backend (Next.js) + ChromaDB (vector store)
+* `app` → Frontend + backend (Next.js)
 * `kali-tools` → Tools uji penetrasi berbasis Flask (Kali Linux)
 
 
@@ -92,55 +91,7 @@ Docker akan mem-build dan menjalankan 3 layanan:
 
 ---
 
-## 🧠 Instalasi Pentest-AI & Ollama (Manual di Luar Docker)
 
-Fitur chatbot AI di Pungoe **tidak dijalankan dalam container**. Anda harus menginstal dan menjalankan **Ollama** secara manual di host machine.
-
-### 🔧 Langkah Instalasi Ollama
-
-1. **Install Ollama**:
-   👉 [https://ollama.com/download](https://ollama.com/download)
-
-2. **Unduh Model Pentest-AI** dari Hugging Face:
-
-   ```bash
-   ollama run hf.co/mav23/Pentest_AI-GGUF:Q5_0
-   ```
-
-   Opsional: Model kuantisasi lainnya tersedia di:
-   👉 [https://huggingface.co/mav23/Pentest\_AI-GGUF](https://huggingface.co/mav23/Pentest_AI-GGUF)
-
-3. **Unduh model untuk embedding** (digunakan oleh Chroma):
-
-   ```bash
-   ollama pull nomic-embed-text
-   ```
-
-4. **Jalankan Ollama sebagai server**:
-
-   ```bash
-   ollama serve
-   ```
-
-> Server Ollama akan aktif di `http://localhost:11434`.
-
----
-
-### 🌐 Akses Ollama dari Dalam Docker
-
-Karena Ollama berjalan di host machine, gunakan alamat ini dari dalam container:
-
-```
-http://host.docker.internal:11434
-```
-
-> Pastikan:
->
-> * Port `11434` tidak diblokir firewall.
-> * Server Ollama aktif (`ollama serve` sedang berjalan).
-> * Model Pentest-AI sudah ter-load.
-
----
 
 ## 📂 Struktur Layanan
 
@@ -154,7 +105,7 @@ http://host.docker.internal:11434
 
 ## 🧪 Akses Aplikasi
 
-Setelah semua container berjalan dan Ollama aktif, buka:
+Setelah semua container berjalan, buka:
 
 * Aplikasi utama:
 
@@ -207,7 +158,6 @@ Dan aplikasi gagal konek ke database, kemungkinan besar **PostgreSQL lokal Anda 
 
 ## ❓ Troubleshooting
 
-* Cek koneksi ke `host.docker.internal:11434` dari container.
 * Pastikan `.env` sesuai konfigurasi jaringan dan database.
 * Gunakan `docker logs <nama_container>` untuk melihat log error.
 * Rebuild paksa jika perlu:

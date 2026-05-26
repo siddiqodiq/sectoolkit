@@ -20,64 +20,15 @@ model User {
   resetTokenExpiry DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  chats            Chat[]
-  knowledgeFiles   Knowledge[] // sebelumnya KnowledgeFile[]
 
   @@map("users")
 }
 
-model Chat {
-  id          String    @id @default(uuid())
-  userId      String
-  title       String
-  modelUsed   String
-  temperature Float?
-  maxTokens   Int?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id])
-  messages    Message[]
 
-  @@map("chats")
-}
-
-model Message {
-  id        String      @id @default(uuid())
-  chatId    String
-  content   String
-  role      MessageRole
-  metadata  Json? 
-  createdAt DateTime    @default(now())
-  chat      Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
-
-  @@map("messages")
-}
-
-model Knowledge {
-  id         String   @id @default(cuid())
-  name       String
-  fileName   String
-  filePath   String
-  size       Int
-  mimeType   String
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status     String   @default("processing") // processing, active, error
-  chunks     Int?     @default(0)
-  ingested   Boolean  @default(false) // Add this field
-  uploadedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@map("knowledge_files")
-}
 
 enum Role {
   USER
   ADMIN
 }
 
-enum MessageRole {
-  USER
-  ASSISTANT
-  SYSTEM
-}
+

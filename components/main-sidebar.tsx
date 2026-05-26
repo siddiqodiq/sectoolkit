@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Shield, Database, Settings, LogOut, User, Bell, Moon, HelpCircle, Plus, MoreVertical, Loader2, Boxes, Brain, MessageSquare, ChevronLeft, ChevronRight, Edit, Check, X, Trash, Trash2 } from "lucide-react"
+import { Shield, Settings, LogOut, User, Bell, Moon, HelpCircle, Boxes } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -21,71 +21,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Separator } from "@/components/ui/separator"
 import { Logo } from "./ui/logo"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { toast } from "./ui/use-toast"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
-
-const navigationItems = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: Shield,
-    badge: null
-  },
-  {
-    title: "Chat",
-    href: "/dashboard",
-    icon: MessageSquare,
-    badge: null
-  },
-  {
-    title: "Knowledge Base",
-    href: "/knowledge",
-    icon: Database,
-    badge: null
-  },
-  {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-    badge: null
-  }
-]
 
 export function MainSidebar() {
-  const [chatHistory, setChatHistory] = useState<any[]>([])
   const { data: session } = useSession()
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [isLoading, setIsLoading] = useState(false) 
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const [editingChatId, setEditingChatId] = useState<string | null>(null)
-  const [editingTitle, setEditingTitle] = useState("")
-
-  // Fungsi untuk mendapatkan active item berdasarkan pathname
-  const getActiveItem = () => {
-    if (pathname === "/dashboard") return "dashboard"
-    if (pathname === "/tools") return "tools"
-    if (pathname === "/database") return "database"
-    return "dashboard" // default
-  }
-
-  // Refresh history ketika route berubah atau session berubah
-  useEffect(() => {
-    loadChatHistory()
-  }, [session, pathname])
 
   // Fungsi untuk mendapatkan inisial dari nama
   const getInitials = (name?: string | null) => {
@@ -124,7 +69,7 @@ export function MainSidebar() {
   const menuItems = [
     { 
       id: "dashboard", 
-      label: "Dashboard AI", 
+      label: "Dashboard", 
       icon: Shield,
       path: "/dashboard",
       onClick: () => router.push("/dashboard")
@@ -135,168 +80,8 @@ export function MainSidebar() {
       icon: Boxes,
       path: "/tools", 
       onClick: () => router.push("/tools")
-    },
-    { 
-      id: "database", 
-      label: "Database", 
-      icon: Database,
-      path: "/database",
-      onClick: () => router.push("/database")
-    },
-    {
-      id: "knowledge",
-      label: "Knowledge Base",
-      icon: Brain,
-      path: "/knowledge",
-      onClick: () => router.push("/knowledge")
-    },
+    }
   ]
-
-  const settingsItems = [
-    { id: "help", label: "Help & Support", icon: HelpCircle },
-  ]
-
-  // Create new chat
-  const handleNewChat = async () => {
-    try {
-      const response = await fetch('/api/chat/history', {
-        method: 'POST'
-      })
-      const newChat = await response.json()
-      router.push(`/dashboard?chat=${newChat.id}`)
-      router.refresh()
-    } catch (error) {
-      console.error('Failed to create new chat:', error)
-    }
-  }
-
-  // Delete chat
-  const currentChatId = searchParams.get('chat')
-
-  const loadChatHistory = async () => {
-    if (!session?.user?.id) return
-    
-    setIsLoading(true) // Set loading true sebelum fetch
-    try {
-      const response = await fetch('/api/chat/history')
-      const data = await response.json()
-      setChatHistory(data)
-    } catch (error) {
-      console.error('Failed to load chat history:', error)
-      toast({
-        title: "Error",
-        description: "Failed to load chat history",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false) // Set loading false setelah selesai
-    }
-  }
-
-  // components/main-sidebar.tsx
-  const handleDeleteChat = async (chatId: string) => {
-    try {
-      const response = await fetch(`/api/chat/history?id=${chatId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete chat')
-      }
-
-      // Jika chat yang sedang aktif dihapus, redirect ke dashboard
-      if (currentChatId === chatId) {
-        router.push('/dashboard')
-      }
-
-      // Refresh chat history
-      await loadChatHistory()
-
-      toast({
-        title: "Success",
-        description: "Chat deleted successfully",
-      })
-    } catch (error) {
-      console.error('Failed to delete chat:', error)
-      toast({
-        title: "Error",
-        description: "Failed to delete chat",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Handle rename chat
-  const handleRenameChat = async (chatId: string, newTitle: string) => {
-    if (!newTitle.trim()) {
-      setEditingChatId(null)
-      setEditingTitle("")
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/chat/history/${chatId}/title`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title: newTitle.trim() }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to rename chat')
-      }
-
-      // Update local state
-      setChatHistory(prev => 
-        prev.map(chat => 
-          chat.id === chatId 
-            ? { ...chat, title: newTitle.trim() }
-            : chat
-        )
-      )
-
-      setEditingChatId(null)
-      setEditingTitle("")
-
-      toast({
-        title: "Success",
-        description: "Chat renamed successfully",
-      })
-    } catch (error) {
-      console.error('Failed to rename chat:', error)
-      toast({
-        title: "Error",
-        description: "Failed to rename chat",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Start editing chat title
-  const startEditing = (chatId: string, currentTitle: string) => {
-    setEditingChatId(chatId)
-    setEditingTitle(currentTitle)
-  }
-
-  // Cancel editing
-  const cancelEditing = () => {
-    setEditingChatId(null)
-    setEditingTitle("")
-  }
-
-  // Handle key press in edit input
-  const handleKeyPress = (e: React.KeyboardEvent, chatId: string) => {
-    if (e.key === 'Enter') {
-      handleRenameChat(chatId, editingTitle)
-    } else if (e.key === 'Escape') {
-      cancelEditing()
-    }
-  }
-
-  useEffect(() => {
-    loadChatHistory()
-  }, [session, pathname])
 
   return (
     <Sidebar side="left" variant="sidebar" collapsible="offcanvas">
@@ -329,115 +114,6 @@ export function MainSidebar() {
                 )
               })}
             </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <div className="flex items-center justify-between px-4 py-2">
-            <SidebarGroupLabel>Chat History</SidebarGroupLabel>
-            <button 
-              onClick={handleNewChat}
-              className="p-1 rounded-full hover:bg-gray-700 transition-colors"
-              aria-label="New chat"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-          <SidebarGroupContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center p-4">
-                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-              </div>
-            ) : (
-              <SidebarMenu>
-                {chatHistory.map((chat) => (
-                  <SidebarMenuItem key={chat.id}>
-                    <div className="flex items-center justify-between w-full group">
-                      {editingChatId === chat.id ? (
-                        // Edit mode
-                        <div className="flex items-center gap-2 flex-1 px-2">
-                          <Input
-                            value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
-                            onKeyDown={(e) => handleKeyPress(e, chat.id)}
-                            onBlur={() => handleRenameChat(chat.id, editingTitle)}
-                            className="h-8 text-sm"
-                            autoFocus
-                            maxLength={50}
-                          />
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => handleRenameChat(chat.id, editingTitle)}
-                              className="p-1 hover:bg-gray-700 rounded"
-                              aria-label="Save"
-                            >
-                              <Check className="h-3 w-3 text-green-500" />
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              className="p-1 hover:bg-gray-700 rounded"
-                              aria-label="Cancel"
-                            >
-                              <X className="h-3 w-3 text-red-500" />
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        // Normal mode
-                        <>
-                          <SidebarMenuButton
-                            onClick={() => router.push(`/dashboard?chat=${chat.id}`)}
-                            className="flex-1 hover-effect"
-                          >
-                            <span className="truncate">
-                              {chat.title || 'New Chat'}
-                            </span>
-                          </SidebarMenuButton>
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button 
-                                className="p-1 transition-opacity" // HAPUS: opacity-0 group-hover:opacity-100
-                                aria-label="Chat options"
-                                disabled={isLoading}
-                              >
-                                {isLoading ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <MoreVertical className="h-4 w-4" />
-                                )}
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem
-                                onClick={() => startEditing(chat.id, chat.title || 'New Chat')}
-                                disabled={isLoading}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Rename
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteChat(chat.id)}
-                                className="text-red-500 focus:text-red-500"
-                                disabled={isLoading}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </>
-                      )}
-                    </div>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            )}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

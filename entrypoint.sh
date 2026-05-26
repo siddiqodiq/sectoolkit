@@ -17,13 +17,6 @@ pnpm prisma migrate deploy
 echo "Generating Prisma client..."
 pnpm prisma generate
 
-# ✅ Jalankan ChromaDB di latar belakang
-echo "Starting ChromaDB server in the background..."
-chroma run --host 0.0.0.0 --port 8000 --path ./db/chroma_langchain_db &
-
-# Beri waktu sejenak agar ChromaDB sempat berjalan
-sleep 3
-
 # Start Next.js app
 echo "Starting Next.js application..."
 exec pnpm start
