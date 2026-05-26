@@ -56,19 +56,18 @@ export function MainNavbar() {
     <nav className="border-b border-gray-800 bg-[#151515] sticky top-0 z-50">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Left side: Logo & Brand */}
-          <div className="flex items-center">
+          {/* Left side: Logo & Navigation */}
+          <div className="flex items-center gap-8">
+            {/* Logo & Brand */}
             <Link href="/dashboard" className="flex items-center gap-2 group">
               <div className="flex h-10 w-10 items-center justify-center rounded-md gradient-bg group-hover:opacity-90 transition-opacity">
                 <Logo className="h-9 w-9 text-white" />
               </div>
               <div className="font-bold text-xl gradient-text ml-2">Pungoe Pentest</div>
             </Link>
-          </div>
 
-          {/* Center: Desktop Navigation */}
-          <div className="hidden md:block ml-10">
-            <div className="flex items-center space-x-1">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-2">
               {menuItems.map((item) => {
                 const isActive = pathname === item.path
                 return (
