@@ -63,7 +63,7 @@ export function MainNavbar() {
               <div className="flex h-10 w-10 items-center justify-center rounded-md gradient-bg group-hover:opacity-90 transition-opacity">
                 <Logo className="h-9 w-9 text-white" />
               </div>
-              <div className="font-bold text-xl gradient-text ml-2">Pungoe Pentest</div>
+              <div className="font-bold text-xl gradient-text ml-2">Pusdatin Security Toolkit</div>
             </Link>
 
             {/* Desktop Navigation */}

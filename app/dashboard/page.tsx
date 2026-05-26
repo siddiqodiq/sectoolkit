@@ -134,7 +134,7 @@ export default function Home() {
           
           <div className="space-y-4 text-center py-8">
             <h1 className="text-4xl font-bold tracking-tight gradient-text sm:text-5xl">
-              Pungoe Pentest Toolkit
+              Pusdatin Security Toolkit
             </h1>
             <p className="text-lg leading-8 text-gray-400 max-w-2xl mx-auto">
               Comprehensive security testing and vulnerability assessment tools.

@@ -79,7 +79,7 @@ export default function HeroWithCanvasReveal() {
         <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-center mb-2 ${glitch ? 'text-blue-300' : 'text-blue-400'}`}>
           <span className="relative">
             <span className={`absolute inset-0 bg-blue-500/30 ${glitch ? 'block' : 'hidden'}`}></span>
-            Pungoe Pentest
+            Pusdatin Security Toolkit
           </span>
         </h1>
 

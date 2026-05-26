@@ -1,8 +1,8 @@
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Login - Pungoe Pentest",
-  description: "Login to Pungoe Pentest",
+  title: "Login - Pusdatin Security Toolkit",
+  description: "Login to Pusdatin Security Toolkit",
   icons: {
     icon: "logo.ico",
     shortcut: "logo.ico",

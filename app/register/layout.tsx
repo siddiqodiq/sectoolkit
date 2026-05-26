@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import '../../app/globals.css'
 
 export const metadata: Metadata = {
-  title: "Register - Pungoe Pentest",
-  description: "Register to Pungoe Pentest",
+  title: "Register - Pusdatin Security Toolkit",
+  description: "Register to Pusdatin Security Toolkit",
   icons: {
     icon: "logo.ico",
     shortcut: "logo.ico",

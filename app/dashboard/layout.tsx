@@ -7,7 +7,7 @@ import { RouteGuard } from "@/components/route-guard"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Pungoe Pentest - Penetration Testing Assistant",
+  title: "Pusdatin Security Toolkit - Penetration Testing Assistant",
   description: "Penetration testing assistant with AI",
   icons: {
     icon: "logo.ico",
