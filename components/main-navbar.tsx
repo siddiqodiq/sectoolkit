@@ -9,7 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Logo } from "./ui/logo"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
@@ -60,9 +59,6 @@ export function MainNavbar() {
           <div className="flex items-center gap-8">
             {/* Logo & Brand */}
             <Link href="/dashboard" className="flex items-center gap-2 group">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md gradient-bg group-hover:opacity-90 transition-opacity">
-                <Logo className="h-9 w-9 text-white" />
-              </div>
               <div className="font-bold text-xl gradient-text ml-2">Pusdatin Security Toolkit</div>
             </Link>
 
