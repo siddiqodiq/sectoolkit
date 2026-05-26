@@ -39,10 +39,10 @@ export function MainNavbar() {
 
   const menuItems = [
     {
-      id: "tools",
+      id: "dashboard",
       label: "Tools",
       icon: Boxes,
-      path: "/tools", 
+      path: "/dashboard", 
     },
     { 
       id: "database", 
@@ -58,7 +58,7 @@ export function MainNavbar() {
         <div className="flex items-center justify-between h-16">
           {/* Left side: Logo & Brand */}
           <div className="flex items-center">
-            <Link href="/tools" className="flex items-center gap-2 group">
+            <Link href="/dashboard" className="flex items-center gap-2 group">
               <div className="flex h-10 w-10 items-center justify-center rounded-md gradient-bg group-hover:opacity-90 transition-opacity">
                 <Logo className="h-9 w-9 text-white" />
               </div>
