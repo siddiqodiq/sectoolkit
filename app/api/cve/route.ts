@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     
     // Buat URL NVD dan teruskan semua parameternya
-    const nvdUrl = new URL('https://services.nvd.nist.gov/rest/json/cves/2.0')
+    const Url = new URL('https://services.nvd.nist.gov/rest/json/cves/2.0')
     searchParams.forEach((value, key) => {
       nvdUrl.searchParams.append(key, value)
     })
