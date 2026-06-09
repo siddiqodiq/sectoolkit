@@ -38,10 +38,10 @@ export function MainNavbar() {
 
   const menuItems = [
     {
-      id: "dashboard",
+      id: "tools",
       label: "Tools",
       icon: Boxes,
-      path: "/dashboard", 
+      path: "/tools", 
     },
     { 
       id: "database", 
@@ -58,7 +58,7 @@ export function MainNavbar() {
           {/* Left side: Logo & Navigation */}
           <div className="flex items-center gap-8">
             {/* Logo & Brand */}
-            <Link href="/dashboard" className="flex items-center gap-2 group">
+            <Link href="/tools" className="flex items-center gap-2 group">
               <div className="font-bold text-xl gradient-text ml-2">Pusdatin Security Toolkit</div>
             </Link>
 

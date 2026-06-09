@@ -44,19 +44,15 @@ export default function LandingPage() {
   useEffect(() => {
     if (!glitch && progress < 100) {
       const timer = setTimeout(() => {
-        setProgress(prev => {
-          const newProgress = prev + 10;
-          if (newProgress >= 100) {
-            setShowSecure(true);
-            setTimeout(() => setBarVisible(false), 1500);
-            return 100;
-          }
-          return newProgress;
-        });
+        setProgress(prev => Math.min(prev + 10, 100));
       }, 100);
       return () => clearTimeout(timer);
+    } else if (progress >= 100 && !showSecure) {
+      setShowSecure(true);
+      const timer = setTimeout(() => setBarVisible(false), 1500);
+      return () => clearTimeout(timer);
     }
-  }, [progress, glitch]);
+  }, [progress, glitch, showSecure]);
 
 
   return (

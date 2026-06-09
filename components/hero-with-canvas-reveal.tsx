@@ -31,20 +31,15 @@ export default function HeroWithCanvasReveal() {
   useEffect(() => {
     if (!glitch && progress < 100) {
       const timer = setTimeout(() => {
-        setProgress(prev => {
-          const newProgress = prev + 10;
-          if (newProgress >= 100) {
-            setShowSecure(true);
-            // Set timeout to hide the bar after 1.5 seconds
-            setTimeout(() => setBarVisible(false), 1500);
-            return 100;
-          }
-          return newProgress;
-        });
+        setProgress(prev => Math.min(prev + 10, 100));
       }, 100);
       return () => clearTimeout(timer);
+    } else if (progress >= 100 && !showSecure) {
+      setShowSecure(true);
+      const timer = setTimeout(() => setBarVisible(false), 1500);
+      return () => clearTimeout(timer);
     }
-  }, [progress, glitch]);
+  }, [progress, glitch, showSecure]);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
