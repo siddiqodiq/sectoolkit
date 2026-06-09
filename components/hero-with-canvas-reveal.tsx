@@ -66,12 +66,12 @@ export default function HeroWithCanvasReveal() {
       {/* Hero Content */}
       <div className="relative z-10 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
         {/* logo with Glitch Effect */}
-        <div className={`mb-8 w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64 transition-all duration-300 ${glitch ? 'translate-x-1' : ''}`}>
-          <Logoglitch className={`w-full h-full text-blue-400 ${glitch ? 'opacity-80' : 'opacity-100'}`} />
+        <div className={`mb-4 sm:mb-6 md:mb-8 w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64 transition-all duration-300 ${glitch ? 'translate-x-1' : ''}`}>
+          <Logoglitch className={`w-full h-full object-contain text-blue-400 ${glitch ? 'opacity-80' : 'opacity-100'}`} />
         </div>
         
         {/* Title with Glitch Effect */}
-        <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-center mb-2 ${glitch ? 'text-blue-300' : 'text-blue-400'}`}>
+        <h1 className={`mt-2 sm:mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-center mb-2 ${glitch ? 'text-blue-300' : 'text-blue-400'}`}>
           <span className="relative">
             <span className={`absolute inset-0 bg-blue-500/30 ${glitch ? 'block' : 'hidden'}`}></span>
             Pusdatin Security Toolkit

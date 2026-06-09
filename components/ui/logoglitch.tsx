@@ -29,13 +29,13 @@ export const Logoglitch: FC<LogoProps> = ({ className = "" }) => {
       {glitch && (
         <>
           <img
-            src="/logo.svg"
+            src="/logo.webp"
             alt=""
             className={`absolute inset-0 ${className} opacity-60 translate-x-1`}
             style={{ filter: `drop-shadow(2px 0 0 ${glitchColor})` }}
           />
           <img
-            src="/logo.svg"
+            src="/logo.webp"
             alt=""
             className={`absolute inset-0 ${className} opacity-40 -translate-x-1`}
             style={{ filter: `drop-shadow(-2px 0 0 ${glitchColor === "rgb(0, 255, 0)" ? "rgb(255, 0, 0)" : glitchColor})` }}
@@ -45,7 +45,7 @@ export const Logoglitch: FC<LogoProps> = ({ className = "" }) => {
       
       {/* Main Logo */}
       <img
-        src="/logo.svg"
+        src="/logo.webp"
         alt="Logo"
         className={`${className} transition-all duration-300 ${glitch ? 'opacity-80' : 'opacity-100'}`}
       />
