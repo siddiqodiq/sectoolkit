@@ -4,17 +4,6 @@ EN [Read English Version](readme.en.md)
 Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose.
 
 ---
-## 🎬 Video Overview
-
-[![Video Overview](https://img.youtube.com/vi/Pf6gngLtV3E/0.jpg)](https://youtu.be/Pf6gngLtV3E)
-
-## 🎬 Panduan Instalasi
-
-### 📺 Video Tutorial Singkat
-
-👉 [Tonton di YouTube](https://youtu.be/zldi5sw7ACU)
-
----
 
 ## 📋 Prasyarat Sistem
 
