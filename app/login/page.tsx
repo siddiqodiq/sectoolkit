@@ -61,8 +61,6 @@ const handleLogin = async () => {
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-background overflow-hidden relative p-4">
       {/* Background Pattern */}
-      <div className="ambient-glow glow-1" />
-      <div className="ambient-glow glow-2" />
       <div className="absolute inset-0 bg-grid-pattern radial-mask pointer-events-none opacity-40" />
       
       <div className="relative z-10 w-full max-w-md mx-auto">
