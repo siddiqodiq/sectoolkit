@@ -102,7 +102,7 @@ export default function LandingPage() {
              <Button
         size="lg"
         onClick={handleGetStarted}
-        className="gradient-btn text-white font-semibold py-3 px-8 rounded-lg text-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-emerald-500/20"
+        className="gradient-btn text-white font-semibold py-3 px-8 rounded-lg text-lg transition-all duration-300 hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:shadow-[0_0_30px_rgba(16,185,129,0.7)]"
       >
         Get Started
       </Button>
