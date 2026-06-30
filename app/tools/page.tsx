@@ -126,11 +126,15 @@ export default function Home() {
   }, [filter])
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
-      <MainNavbar />
+    <div className="flex flex-col h-screen w-full bg-background overflow-hidden relative">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-grid-pattern radial-mask pointer-events-none opacity-40" />
       
-      <div className="flex-1 overflow-y-auto w-full">
-        <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
+      <div className="relative z-10 flex flex-col h-full w-full">
+        <MainNavbar />
+        
+        <div className="flex-1 overflow-y-auto w-full">
+          <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
           
           <div className="space-y-4 text-center py-8">
             <h1 className="text-4xl font-bold tracking-tight gradient-text sm:text-5xl">
@@ -251,6 +255,7 @@ export default function Home() {
           />
         </div>
       </div>
+    </div>
     </div>
   )
 }

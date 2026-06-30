@@ -53,11 +53,15 @@ export default function SecurityDatabasePage() {
   ]
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-background overflow-hidden">
-      <MainNavbar />
-      <div className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-7xl mx-auto w-full">
-          <SearchHeader />
+    <div className="flex flex-col min-h-screen w-full bg-background overflow-hidden relative">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-grid-pattern radial-mask pointer-events-none opacity-40" />
+
+      <div className="relative z-10 flex flex-col w-full h-full">
+        <MainNavbar />
+        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="max-w-7xl mx-auto w-full">
+            <SearchHeader />
           
           <Tabs defaultValue="cve" className="w-full">
           <TabsList className="grid grid-cols-3 w-full md:w-[400px] glass-effect">
@@ -148,6 +152,7 @@ export default function SecurityDatabasePage() {
           </Tabs>
         </div>
       </div>
+    </div>
     </div>
   )
 }
