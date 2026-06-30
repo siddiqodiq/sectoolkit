@@ -55,6 +55,8 @@ export default function SecurityDatabasePage() {
   return (
     <div className="flex flex-col min-h-screen w-full bg-background overflow-hidden relative">
       {/* Background Pattern */}
+      <div className="ambient-glow glow-1" />
+      <div className="ambient-glow glow-2" />
       <div className="absolute inset-0 bg-grid-pattern radial-mask pointer-events-none opacity-40" />
 
       <div className="relative z-10 flex flex-col w-full h-full">

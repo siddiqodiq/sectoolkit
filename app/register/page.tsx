@@ -170,10 +170,15 @@ function RegisterForm() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-black p-4">
-      <div className="absolute inset-0 grid-pattern opacity-20"></div>
-      <div className="relative w-full max-w-md mx-auto">
-        <Card className="w-full border-gray-800 bg-black/80 backdrop-blur-md">
+    <div className="flex min-h-screen w-full items-center justify-center bg-black overflow-hidden relative p-4">
+      {/* Background Pattern */}
+      <div className="ambient-glow glow-1" />
+      <div className="ambient-glow glow-2" />
+      <div className="absolute inset-0 bg-grid-pattern radial-mask pointer-events-none opacity-40" />
+
+      <div className="relative z-10 w-full max-w-md mx-auto">
+        <Card className="w-full border-blue-500/30 bg-black/40 backdrop-blur-xl shadow-[0_0_40px_rgba(37,99,235,0.15)] relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-500/50 to-transparent"></div>
           <CardHeader className="space-y-1 text-center">
             <Logoglitch className="mx-auto h-[80px] w-auto text-white" />
             <CardTitle className="text-2xl font-bold gradient-text text-gray-400">Create an account</CardTitle>

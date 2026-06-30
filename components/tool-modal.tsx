@@ -55,7 +55,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       return (
         <SubdomainModal 
           tool={selectedTool}
-          isOpen={internalIsOpen}
+          isOpen={isOpen}
           onClose={handleClose}
           onSendToChat={onSendToChat}
         />
