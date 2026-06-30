@@ -170,7 +170,7 @@ function RegisterForm() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-black overflow-hidden relative p-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-background overflow-hidden relative p-4">
       {/* Background Pattern */}
       <div className="ambient-glow glow-1" />
       <div className="ambient-glow glow-2" />

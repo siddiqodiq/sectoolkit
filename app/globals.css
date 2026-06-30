@@ -85,7 +85,7 @@
 }
 
 .gradient-btn {
-  background-image: linear-gradient(135deg, #808080, #a0a0a0);
+  background-image: linear-gradient(135deg, #2563eb, #9333ea);
   @apply hover:opacity-90 transition-all duration-300 text-white font-medium;
 }
 
