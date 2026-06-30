@@ -63,9 +63,9 @@ export default function LandingPage() {
           animationSpeed={2}
           containerClassName="bg-black"
           colors={[
-            [0, 100, 255],   // Blue
-            [100, 150, 255], // Light blue
-            [0, 50, 150],    // Dark blue
+            [30, 58, 138],   // Navy Blue
+            [22, 101, 52],   // Dark Green
+            [16, 185, 129],  // Emerald
           ]}
           dotSize={2}
           opacities={[0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1, 1, 1, 1]}
@@ -74,26 +74,26 @@ export default function LandingPage() {
 
       {/* Glitch Effect Overlay */}
       {glitch && (
-        <div className="absolute inset-0 bg-blue-900/20 pointer-events-none animate-pulse" />
+        <div className="absolute inset-0 bg-emerald-900/20 pointer-events-none animate-pulse" />
       )}
 
       {/* Hero Content */}
       <div className="relative z-10 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
         {/* logo with Glitch Effect */}
         <div className={`mb-4 sm:mb-6 md:mb-8 w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64 transition-all duration-300 ${glitch ? 'translate-x-1' : ''}`}>
-          <Logoglitch className={`w-full h-full object-contain text-blue-400 ${glitch ? 'opacity-80' : 'opacity-100'}`} />
+          <Logoglitch className={`w-full h-full object-contain text-emerald-500 ${glitch ? 'opacity-80' : 'opacity-100'}`} />
         </div>
         
         {/* Title with Glitch Effect */}
-        <h1 className={`mt-2 sm:mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-center mb-2 ${glitch ? 'text-blue-300' : 'text-blue-400'}`}>
+        <h1 className={`mt-2 sm:mt-4 text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-center mb-2 ${glitch ? 'text-emerald-300' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-500'}`}>
           <span className="relative">
-            <span className={`absolute inset-0 bg-blue-500/30 ${glitch ? 'block' : 'hidden'}`}></span>
+            <span className={`absolute inset-0 bg-emerald-500/30 ${glitch ? 'block' : 'hidden'}`}></span>
             Pusdatin Security Toolkit
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-4 sm:mt-5 text-lg sm:text-xl text-blue-200/80 max-w-2xl mx-auto text-center">
+        <p className="mt-4 sm:mt-5 text-lg sm:text-xl text-emerald-100/80 max-w-2xl mx-auto text-center">
           “Built to Hack. Designed to Defend.”
         </p>
 
@@ -102,7 +102,7 @@ export default function LandingPage() {
              <Button
         size="lg"
         onClick={handleGetStarted}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg text-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-blue-500/20"
+        className="gradient-btn text-white font-semibold py-3 px-8 rounded-lg text-lg transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-emerald-500/20"
       >
         Get Started
       </Button>
@@ -110,17 +110,17 @@ export default function LandingPage() {
         </div>
 
         {/* Hacking Animation */}
-        <div className="mt-12 text-blue-300 font-mono text-xs sm:text-sm flex flex-col items-center">
-          <div className={`${glitch ? 'text-blue-500' : ''}`}>
+        <div className="mt-12 text-emerald-300 font-mono text-xs sm:text-sm flex flex-col items-center">
+          <div className={`${glitch ? 'text-emerald-500' : ''}`}>
             {glitch 
               ? '>_ Initializing security protocols...' 
               : showSecure 
                 ? '>_ System secure' 
                 : '>_ Loading security protocols...'}
           </div>
-          <div className={`h-1 w-20 bg-blue-500/50 mt-2 overflow-hidden transition-opacity duration-500 ${barVisible ? 'opacity-100' : 'opacity-0'}`}>
+          <div className={`h-1 w-20 bg-emerald-500/50 mt-2 overflow-hidden transition-opacity duration-500 ${barVisible ? 'opacity-100' : 'opacity-0'}`}>
             <div 
-              className={`h-full bg-blue-400 transition-all duration-300 ease-out`}
+              className={`h-full bg-emerald-400 transition-all duration-300 ease-out`}
               style={{ width: `${progress}%` }}
             ></div>
           </div>
