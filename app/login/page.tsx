@@ -71,6 +71,7 @@ const handleLogin = async () => {
             <CardTitle className="text-2xl font-bold gradient-text text-gray-400">Welcome, Hackers!</CardTitle>
             <CardDescription className="text-gray-400">Enter your credentials to access your account</CardDescription>
           </CardHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
           <CardContent className="space-y-4">
             {error && (
               <div className="flex items-center justify-center text-red-500 text-sm p-2 bg-red-500/10 rounded-md">
@@ -123,8 +124,8 @@ const handleLogin = async () => {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button 
+              type="submit"
               className="w-full gradient-btn button-hover"
-              onClick={handleLogin}
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}
@@ -136,6 +137,7 @@ const handleLogin = async () => {
               </Link>
             </div>
           </CardFooter>
+          </form>
         </Card>
       </div>
     </div>

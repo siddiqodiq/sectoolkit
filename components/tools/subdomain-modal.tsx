@@ -304,7 +304,7 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
               <TabsContent value="activeCheck" className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label>Domain or File</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <Input
                       type="text"
                       placeholder="example.com"
@@ -377,47 +377,51 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
                 {activeTab === "enumeration" ? "Enumeration Results" : "Active Check Results"}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="relative">
-                <pre className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto whitespace-pre-wrap">
-                  {currentResults}
-                </pre>
-                <div className="absolute top-2 right-2 flex gap-2">
+            <CardContent className="space-y-3">
+              <pre className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto whitespace-pre-wrap max-h-[40vh] overflow-y-auto">
+                {currentResults}
+              </pre>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(currentResults);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  aria-label="Copy results"
+                  className="flex-1 sm:flex-none"
+                >
+                  {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                  <span>{copied ? "Copied" : "Copy"}</span>
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleDownloadResults}
+                  aria-label="Download results"
+                  className="flex-1 sm:flex-none"
+                  disabled={
+                    (activeTab === "enumeration" && enumerationResults.length === 0) ||
+                    (activeTab === "activeCheck" && activeCheckResults.length === 0)
+                  }
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  <span>Download</span>
+                </Button>
+                {onSendToChat && (
                   <Button 
                     size="sm" 
                     variant="outline" 
-                    onClick={() => {
-                      navigator.clipboard.writeText(currentResults);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
-                    aria-label="Copy results"
+                    onClick={() => onSendToChat(currentResults)}
+                    aria-label="Send to chat"
+                    className="flex-1 sm:flex-none"
                   >
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    <Send className="h-4 w-4 mr-2" />
+                    <span>Send</span>
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handleDownloadResults}
-                    aria-label="Download results"
-                    disabled={
-                      (activeTab === "enumeration" && enumerationResults.length === 0) ||
-                      (activeTab === "activeCheck" && activeCheckResults.length === 0)
-                    }
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  {onSendToChat && (
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => onSendToChat(currentResults)}
-                      aria-label="Send to chat"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>

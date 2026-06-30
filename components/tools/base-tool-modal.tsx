@@ -26,12 +26,12 @@ export function BaseToolModal({
   return (
     <Modal open={isOpen} onClose={onClose} closeOnOutsideClick={true}>
       <div className={`flex flex-col max-h-[80vh] w-full ${className}`}>
-        <div className="border-b border-gray-800 p-4 flex items-center justify-between">
+        <div className="border-b border-gray-800 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
           <div>
             <h2 className="text-xl font-bold gradient-text">{tool.name}</h2>
-            <p className="text-sm text-gray-400 mt-1">{tool.description}</p>
+            <p className="text-sm text-gray-400 mt-1 line-clamp-2 sm:line-clamp-none">{tool.description}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
             <Badge className={getStatusColor(tool.status)}>
               {tool.status}
             </Badge>

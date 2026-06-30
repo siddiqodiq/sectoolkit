@@ -59,7 +59,7 @@ export function MainNavbar() {
           <div className="flex items-center gap-8">
             {/* Logo & Brand */}
             <Link href="/tools" className="flex items-center gap-2 group">
-              <div className="font-bold text-xl gradient-text ml-2">Pusdatin Security Toolkit</div>
+              <div className="font-bold text-base sm:text-lg md:text-xl gradient-text ml-2">Pusdatin Security Toolkit</div>
             </Link>
 
             {/* Desktop Navigation */}

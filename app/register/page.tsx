@@ -182,6 +182,7 @@ function RegisterForm() {
             <CardTitle className="text-2xl font-bold gradient-text text-gray-400">Create an account</CardTitle>
             <CardDescription className="text-gray-400">Enter your information to create your account</CardDescription>
           </CardHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
           <CardContent className="space-y-4">
             {error && (
               <div className="flex items-center justify-center text-red-500 text-sm p-2 bg-red-500/10 rounded-md">
@@ -272,9 +273,9 @@ function RegisterForm() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button 
+              type="submit"
               className="w-full gradient-btn button-hover"
               disabled={!!passwordError || isLoading}
-              onClick={handleRegister}
             >
               {isLoading ? "Creating account..." : "Sign Up"}
             </Button>
@@ -285,6 +286,7 @@ function RegisterForm() {
               </Link>
             </div>
           </CardFooter>
+          </form>
         </Card>
       </div>
 
