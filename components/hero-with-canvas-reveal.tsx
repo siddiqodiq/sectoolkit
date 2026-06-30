@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Logoglitch } from "@/components/ui/logoglitch"
 import { useEffect, useState } from "react"
 
-export default function HeroWithCanvasReveal() {
+function HeroContent() {
   const [glitch, setGlitch] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showSecure, setShowSecure] = useState(false);
@@ -42,22 +42,7 @@ export default function HeroWithCanvasReveal() {
   }, [progress, glitch, showSecure]);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
-      {/* Canvas Reveal Effect Background */}
-      <div className="absolute inset-0">
-        <CanvasRevealEffect
-          animationSpeed={2}
-          containerClassName="bg-black"
-          colors={[
-            [0, 100, 255],   // Blue
-            [100, 150, 255], // Light blue
-            [0, 50, 150],    // Dark blue
-          ]}
-          dotSize={2}
-          opacities={[0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1, 1, 1, 1]}
-        />
-      </div>
-
+    <>
       {/* Glitch Effect Overlay */}
       {glitch && (
         <div className="absolute inset-0 bg-blue-900/20 pointer-events-none animate-pulse" />
@@ -110,6 +95,29 @@ export default function HeroWithCanvasReveal() {
           </div>
         </div>
       </div>
+    </>
+  )
+}
+
+export default function HeroWithCanvasReveal() {
+  return (
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
+      {/* Canvas Reveal Effect Background */}
+      <div className="absolute inset-0">
+        <CanvasRevealEffect
+          animationSpeed={2}
+          containerClassName="bg-black"
+          colors={[
+            [0, 100, 255],   // Blue
+            [100, 150, 255], // Light blue
+            [0, 50, 150],    // Dark blue
+          ]}
+          dotSize={2}
+          opacities={[0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1, 1, 1, 1]}
+        />
+      </div>
+
+      <HeroContent />
     </div>
   )
 }

@@ -1,30 +1,31 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { tools } from "@/lib/tools"
 import { BaseToolModal } from "@/components/tools/base-tool-modal"
-import { SubdomainModal } from "@/components/tools/subdomain-modal"
-import { WafModal } from "@/components/tools/waf-modal"
-import { UrlCrawlerModal } from "./tools/url-crawler-modal"
-import { DeepCrawlerModal } from "./tools/deep-crawler-modal"
-import { WaybackDorkingModal } from "./tools/wayback-dorking-modal"
-import { WhoisLookupModal } from "./tools/whois-lookup-modal"
-import { NmapScanModal } from "./tools/nmap-scan-modal"
-import { CvssCalculatorModal } from "./tools/cvss-calculator-modal"
-import { CorsScannerModal } from "./tools/cors-scanner-modal"
-import { GoogleDorkModal } from "./tools/google-dork-modal"
-import { OpenRedirectModal } from "./tools/open-redirect-modal"
-import { UrlFuzzerModal } from "./tools/url-fuzzer-modal"
-import { XssScanModal } from "./tools/xss-scan-modal"
-import { SqlScanModal } from "./tools/sqlmap-modal"
-import { DnsReconModal } from "./tools/dnsrecon-modal"
-import { NucleiScanModal } from "./tools/nuclei-scan-modal"
-import { ParamEnumModal } from "./tools/param-enum-modal"
-import { SubdomainTakeoverModal } from "./tools/sudomain-takeover-modal"
-import { DecoderEncoderModal } from "./tools/decoder-encoder-modal"
-import { JwtDebuggerModal } from "./tools/jwt-debugger-modal"
-import { LfiScanModal } from "./tools/lfi-scan-modal"
-import { SecurityHeadersModal } from "./tools/security-headers-modal"
+
+const SubdomainModal = dynamic(() => import("@/components/tools/subdomain-modal").then(mod => mod.SubdomainModal))
+const WafModal = dynamic(() => import("@/components/tools/waf-modal").then(mod => mod.WafModal))
+const UrlCrawlerModal = dynamic(() => import("./tools/url-crawler-modal").then(mod => mod.UrlCrawlerModal))
+const DeepCrawlerModal = dynamic(() => import("./tools/deep-crawler-modal").then(mod => mod.DeepCrawlerModal))
+const WaybackDorkingModal = dynamic(() => import("./tools/wayback-dorking-modal").then(mod => mod.WaybackDorkingModal))
+const WhoisLookupModal = dynamic(() => import("./tools/whois-lookup-modal").then(mod => mod.WhoisLookupModal))
+const NmapScanModal = dynamic(() => import("./tools/nmap-scan-modal").then(mod => mod.NmapScanModal))
+const CvssCalculatorModal = dynamic(() => import("./tools/cvss-calculator-modal").then(mod => mod.CvssCalculatorModal))
+const CorsScannerModal = dynamic(() => import("./tools/cors-scanner-modal").then(mod => mod.CorsScannerModal))
+const GoogleDorkModal = dynamic(() => import("./tools/google-dork-modal").then(mod => mod.GoogleDorkModal))
+const OpenRedirectModal = dynamic(() => import("./tools/open-redirect-modal").then(mod => mod.OpenRedirectModal))
+const UrlFuzzerModal = dynamic(() => import("./tools/url-fuzzer-modal").then(mod => mod.UrlFuzzerModal))
+const XssScanModal = dynamic(() => import("./tools/xss-scan-modal").then(mod => mod.XssScanModal))
+const SqlScanModal = dynamic(() => import("./tools/sqlmap-modal").then(mod => mod.SqlScanModal))
+const DnsReconModal = dynamic(() => import("./tools/dnsrecon-modal").then(mod => mod.DnsReconModal))
+const NucleiScanModal = dynamic(() => import("./tools/nuclei-scan-modal").then(mod => mod.NucleiScanModal))
+const ParamEnumModal = dynamic(() => import("./tools/param-enum-modal").then(mod => mod.ParamEnumModal))
+const SubdomainTakeoverModal = dynamic(() => import("./tools/sudomain-takeover-modal").then(mod => mod.SubdomainTakeoverModal))
+const DecoderEncoderModal = dynamic(() => import("./tools/decoder-encoder-modal").then(mod => mod.DecoderEncoderModal))
+const JwtDebuggerModal = dynamic(() => import("./tools/jwt-debugger-modal").then(mod => mod.JwtDebuggerModal))
+const LfiScanModal = dynamic(() => import("./tools/lfi-scan-modal").then(mod => mod.LfiScanModal))
+const SecurityHeadersModal = dynamic(() => import("./tools/security-headers-modal").then(mod => mod.SecurityHeadersModal))
 
 interface ToolModalProps {
   toolId: string | null
@@ -34,31 +35,19 @@ interface ToolModalProps {
 }
 
 export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalProps) {
-  const [internalIsOpen, setInternalIsOpen] = useState(false)
   const selectedTool = tools.find((tool) => tool.id === toolId)
 
-  
-
-  // Sync internal state with props
-  useEffect(() => {
-    if (isOpen) {
-      setInternalIsOpen(true)
-    } else {
-      // Add delay to allow animations to complete
-      const timer = setTimeout(() => {
-        setInternalIsOpen(false)
-      }, 300)
-      return () => clearTimeout(timer)
-    }
-  }, [isOpen])
-
-  const handleClose = () => {
-    setInternalIsOpen(false)
-    onClose()
+  if (!isOpen && !selectedTool) {
+    return null
   }
 
-  if (!internalIsOpen || !selectedTool) {
-    return null
+  // To allow exit animations, we still render the component when isOpen is false, 
+  // but if selectedTool is null, we can't render anything useful.
+  // The Modal component inside each specific tool modal handles the actual open/close state.
+  if (!selectedTool) return null;
+
+  const handleClose = () => {
+    onClose()
   }
 
   switch (selectedTool.name) {
@@ -75,7 +64,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       return (
         <WafModal 
           tool={selectedTool}
-          isOpen={internalIsOpen}
+          isOpen={isOpen}
           onClose={handleClose}
           onSendToChat={onSendToChat}
         />
@@ -84,7 +73,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       return (
         <UrlCrawlerModal
           tool={selectedTool}
-          isOpen={internalIsOpen}
+          isOpen={isOpen}
           onClose={handleClose}
           onSendToChat={onSendToChat}
         />
@@ -93,7 +82,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       return (
         <DeepCrawlerModal
           tool={selectedTool}
-          isOpen={internalIsOpen}
+          isOpen={isOpen}
           onClose={handleClose}
           onSendToChat={onSendToChat}
         />
@@ -102,7 +91,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
     return (
     <WaybackDorkingModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />
@@ -111,7 +100,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <WhoisLookupModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />
@@ -120,7 +109,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <NmapScanModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />
@@ -129,7 +118,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
         <CvssCalculatorModal
           tool={selectedTool}
-          isOpen={internalIsOpen}
+          isOpen={isOpen}
           onClose={handleClose}
           onSendToChat={onSendToChat}
         />
@@ -138,7 +127,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       return (
         <CorsScannerModal
           tool={selectedTool}
-          isOpen={internalIsOpen}
+          isOpen={isOpen}
           onClose={handleClose}
           onSendToChat={onSendToChat}
         />
@@ -147,7 +136,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <GoogleDorkModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />
@@ -156,7 +145,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <OpenRedirectModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />
@@ -165,7 +154,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <UrlFuzzerModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
@@ -173,7 +162,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <XssScanModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
@@ -181,7 +170,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <SqlScanModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
@@ -189,7 +178,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
     return (
     <NucleiScanModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
@@ -197,7 +186,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
   return (
     <DnsReconModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
@@ -205,42 +194,42 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
       return(
       <ParamEnumModal
       tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
     case "Subdomain Takeover":
       return (
         <SubdomainTakeoverModal tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
      case "Decoder/Encoder":
       return (
         <DecoderEncoderModal tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
      case "JWT Debugger":
       return (
         <JwtDebuggerModal tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
     case "LFI Exploiter":
       return (
         <LfiScanModal tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
      case "Security Headers Checker":
       return (
         <SecurityHeadersModal tool={selectedTool}
-      isOpen={internalIsOpen}
+      isOpen={isOpen}
       onClose={handleClose}
       onSendToChat={onSendToChat}
     />)
@@ -248,7 +237,7 @@ export function ToolModal({ toolId, isOpen, onClose, onSendToChat }: ToolModalPr
 
     default:
       return (
-        <BaseToolModal tool={selectedTool} isOpen={internalIsOpen} onClose={handleClose}>
+        <BaseToolModal tool={selectedTool} isOpen={isOpen} onClose={handleClose}>
           <div className="p-4">
             <p>This tool is not yet implemented</p>
           </div>

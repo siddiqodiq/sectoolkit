@@ -24,6 +24,8 @@ export interface ModalProps extends React.HTMLAttributes<HTMLDivElement>, Varian
   closeOnOutsideClick?: boolean
 }
 
+import { motion, AnimatePresence } from "framer-motion"
+
 export function Modal({
   className,
   children,
@@ -62,22 +64,37 @@ export function Modal({
     }
   }, [isOpen, onClose])
 
-  if (!isOpen || !mounted) return null
+  if (!mounted) return null
 
   return createPortal(
-    <div className={cn(modalVariants({ variant }), className)} {...props}>
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={closeOnOutsideClick ? onClose : undefined}
-        aria-hidden="true"
-      />
-      <div
-        className="z-10 max-h-[90vh] w-full max-w-3xl overflow-auto rounded-lg border border-gray-800 bg-black/90 shadow-xl glass-effect"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </div>,
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          className={cn(modalVariants({ variant }), className)} 
+          {...props}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={closeOnOutsideClick ? onClose : undefined}
+            aria-hidden="true"
+          />
+          <motion.div
+            className="z-10 max-h-[90vh] w-full max-w-3xl overflow-auto rounded-lg border border-gray-800 bg-black/90 shadow-xl glass-effect"
+            onClick={(e) => e.stopPropagation()}
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          >
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body
   )
 }
