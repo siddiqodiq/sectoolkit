@@ -186,7 +186,7 @@
 }
 
 /* Fix for text wrapping in minimized sidebar */
-.group-data-\[collapsible\=icon\]:w-\[--sidebar-width-icon\] .truncate {
+.group-data-\[collapsible\=icon\]\:w-\[--sidebar-width-icon\] .truncate {
   width: 0;
   white-space: nowrap;
   overflow: hidden;
