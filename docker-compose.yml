@@ -3,8 +3,8 @@ services:
     image: postgres:15
     container_name: pungoe_postgres
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_USER: ${DB_USER:-sdqodq}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pusdatinsectoolkit}
       POSTGRES_DB: ${DB_NAME:-sectoolkit}
     ports:
       - "5432:5432"
@@ -22,6 +22,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.nextjs
+    env_file:
+      - .env
     container_name: pungoe_app
     depends_on:
       postgres:
@@ -47,6 +49,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.kali
+    env_file:
+      - .env
     container_name: pungoe_kali_tools
     hostname: kali-tools
     ports:
@@ -56,7 +60,7 @@ services:
       - ./uploads:/app/uploads
     environment:
       FLASK_ENV: production
-      POSTGRES_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-sectoolkit}
+      POSTGRES_URL: postgresql://${DB_USER:-sdqodq}:${DB_PASSWORD:-pusdatinsectoolkit}@postgres:5432/${DB_NAME:-sectoolkit}
     networks:
       - pungoe_network
     restart: unless-stopped
