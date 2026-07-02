@@ -136,7 +136,7 @@ def check_active_urls():
             if not allowed_file(file.filename):
                 return jsonify({"error": "Only .txt files are allowed"}), 400
                 
-            filename = secure_filename(file.filename)
+            filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             
@@ -413,7 +413,7 @@ def crawl_url():
                 return jsonify({"error": "Only .txt files are allowed"}), 400
                 
             # Simpan file
-            filename = secure_filename(file.filename)
+            filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(filepath)
             
