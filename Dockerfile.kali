@@ -39,17 +39,17 @@ RUN apt install -y \
 # Instalasi tools Go
 ENV GOPATH=/go
 ENV PATH="/go/bin:${PATH}"
-RUN go install github.com/tomnomnom/assetfinder@latest && \
-    go install github.com/projectdiscovery/httpx/cmd/httpx@latest && \
-    go install github.com/ffuf/ffuf@latest && \
-    go install github.com/tomnomnom/waybackurls@latest && \
-    go install github.com/tomnomnom/gf@latest && \
-    go install github.com/hahwul/dalfox/v2@latest && \
-    go install github.com/projectdiscovery/katana/cmd/katana@v1.1.0 && \
-    go install github.com/tomnomnom/qsreplace@latest && \
-    go install github.com/lc/gau/v2/cmd/gau@latest && \
-    go install github.com/PentestPad/subzy@latest && \
-    ln -s /go/bin/* /usr/local/bin/
+RUN go install github.com/tomnomnom/assetfinder@latest
+RUN go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+RUN go install github.com/ffuf/ffuf@latest
+RUN go install github.com/tomnomnom/waybackurls@latest
+RUN go install github.com/tomnomnom/gf@latest
+RUN go install github.com/hahwul/dalfox/v2@latest
+RUN go install github.com/projectdiscovery/katana/cmd/katana@v1.1.0
+RUN go install github.com/tomnomnom/qsreplace@latest
+RUN go install github.com/lc/gau/v2/cmd/gau@latest
+RUN go install github.com/PentestPad/subzy@latest
+RUN ln -s /go/bin/* /usr/local/bin/
 
 WORKDIR $TOOLS_DIR
 
