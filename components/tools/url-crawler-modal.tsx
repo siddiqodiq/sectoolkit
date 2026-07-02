@@ -1,6 +1,6 @@
 // components/tools/url-crawler-modal.tsx
 "use client";
-import { useState, useRef, ChangeEvent } from "react";
+import { useState, useRef, ChangeEvent, useEffect } from "react";
 import { BaseToolModal } from "./base-tool-modal";
 import { Tool } from "@/lib/tools";
 import { 
@@ -55,7 +55,17 @@ export function UrlCrawlerModal({ tool, isOpen, onClose, onSendToChat }: UrlCraw
     const [showConfirmClose, setShowConfirmClose] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showFormatGuide, setShowFormatGuide] = useState(false);
+    const [sessionId, setSessionId] = useState<string | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
     const { toast } = useToast();
+  
+    useEffect(() => {
+      return () => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      };
+    }, []);
   
     const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files.length > 0) {
@@ -87,6 +97,9 @@ export function UrlCrawlerModal({ tool, isOpen, onClose, onSendToChat }: UrlCraw
       setIsLoading(true);
       setError(null);
       setResults([]);
+      const newSessionId = crypto.randomUUID();
+      setSessionId(newSessionId);
+      abortControllerRef.current = new AbortController();
   
       try {
         let response;
@@ -94,8 +107,12 @@ export function UrlCrawlerModal({ tool, isOpen, onClose, onSendToChat }: UrlCraw
         if (activeTab === "single") {
           response = await fetch('/api/tools/url-crawler', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ domain })
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Session-ID': newSessionId
+            },
+            body: JSON.stringify({ domain }),
+            signal: abortControllerRef.current.signal
           });
         } else {
           const formData = new FormData();
@@ -103,7 +120,11 @@ export function UrlCrawlerModal({ tool, isOpen, onClose, onSendToChat }: UrlCraw
           
           response = await fetch('/api/tools/url-crawler', {
             method: 'POST',
-            body: formData
+            headers: {
+              'X-Session-ID': newSessionId
+            },
+            body: formData,
+            signal: abortControllerRef.current.signal
           });
         }
   
@@ -120,16 +141,26 @@ export function UrlCrawlerModal({ tool, isOpen, onClose, onSendToChat }: UrlCraw
           description: `Found ${data.count || 0} URLs`,
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-        setError(errorMessage);
-        
-        toast({
-          title: "Error running crawler",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          toast({
+            title: "Crawling cancelled",
+            description: "The crawler process was cancelled.",
+            variant: "destructive",
+          });
+        } else {
+          const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+          setError(errorMessage);
+          
+          toast({
+            title: "Error running crawler",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
       } finally {
         setIsLoading(false);
+        setSessionId(null);
+        abortControllerRef.current = null;
       }
     };
   
@@ -141,8 +172,30 @@ export function UrlCrawlerModal({ tool, isOpen, onClose, onSendToChat }: UrlCraw
       }
     };
   
-    const confirmClose = () => {
-      setIsLoading(false); // This will cancel any ongoing fetch requests
+    const stopCrawler = async () => {
+      if (!sessionId) return;
+      try {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+        await fetch('/api/tools/url-crawler/stop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId })
+        });
+      } catch (error) {
+        console.error("Failed to stop crawler", error);
+      } finally {
+        setIsLoading(false);
+        setSessionId(null);
+        abortControllerRef.current = null;
+      }
+    };
+  
+    const confirmClose = async () => {
+      if (isLoading && sessionId) {
+        await stopCrawler();
+      }
       setShowConfirmClose(false);
       onClose();
     };
@@ -317,23 +370,25 @@ export function UrlCrawlerModal({ tool, isOpen, onClose, onSendToChat }: UrlCraw
                 </Tabs>
               </CardContent>
               <CardFooter>
-                <Button
-                  onClick={handleRunCrawler}
-                  disabled={isLoading || (activeTab === "single" ? !domain : !file)}
-                  className="w-full"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Crawling...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Start Crawling
-                    </>
-                  )}
-                </Button>
+                {isLoading ? (
+                  <Button
+                    onClick={stopCrawler}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel Crawling
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleRunCrawler}
+                    disabled={activeTab === "single" ? !domain : !file}
+                    className="w-full"
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Start Crawling
+                  </Button>
+                )}
               </CardFooter>
             </Card>
   

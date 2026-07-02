@@ -20,9 +20,13 @@ export async function POST(req: Request) {
       // Forward to Flask backend
       const flaskFormData = new FormData();
       flaskFormData.append('file', file);
+      const sessionId = req.headers.get('x-session-id');
 
       const flaskResponse = await fetch(`${kaliToolsUrl}/api/crawlurl`, {
         method: 'POST',
+        headers: {
+          ...(sessionId ? { 'X-Session-ID': sessionId } : {})
+        },
         body: flaskFormData
       });
 
@@ -47,9 +51,13 @@ export async function POST(req: Request) {
       }
 
       // Forward to Flask backend
+      const sessionId = req.headers.get('x-session-id');
       const flaskResponse = await fetch(`${kaliToolsUrl}/api/crawlurl`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(sessionId ? { 'X-Session-ID': sessionId } : {})
+        },
         body: JSON.stringify({ domain })
       });
 

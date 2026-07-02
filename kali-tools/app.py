@@ -400,6 +400,7 @@ def stop_fuzzing():
 @app.route('/api/crawlurl', methods=['POST'])
 def crawl_url():
     try:
+        session_id = request.headers.get('X-Session-ID')
         command = None  # Inisialisasi command
         
         # Handle file upload
@@ -435,7 +436,7 @@ def crawl_url():
 
         # ✅ Eksekusi command setelah didefinisikan
         if command:
-            output = execute_paramspider(command)
+            output = execute_paramspider(command, session_id)
             results = parse_paramspider_output(output) if output else []
             
             # Cleanup file jika ada
@@ -467,8 +468,30 @@ def crawl_url():
         cleanup_results()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/crawlurl/stop', methods=['POST'])
+def stop_crawlurl():
+    data = request.json
+    session_id = data.get('session_id')
+    
+    if not session_id:
+        return jsonify({"error": "Session ID required"}), 400
+        
+    if session_id in active_processes:
+        process = active_processes[session_id]
+        import signal
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        except Exception as e:
+            logger.error(f"Failed to kill process group: {e}")
+            process.kill()
+        del active_processes[session_id]
+        logger.info(f"Killed paramspider process for session {session_id}")
+        return jsonify({"status": "success", "message": "Crawler stopped"})
+        
+    return jsonify({"error": "Process not found or already completed"}), 404
+
 # ✅ Sederhanakan fungsi execute_paramspider untuk menerima list command
-def execute_paramspider(command: list):
+def execute_paramspider(command: list, session_id: str = None):
     """Execute paramspider with venv activation and return live output"""
     try:
         paramspider_dir = os.path.expanduser('~/tools/ParamSpider')
@@ -492,10 +515,18 @@ def execute_paramspider(command: list):
             text=True,
             bufsize=1,
             universal_newlines=True,
-            cwd=paramspider_dir
+            cwd=paramspider_dir,
+            preexec_fn=os.setsid
         )
         
-        output, error = process.communicate(timeout=300)
+        if session_id:
+            active_processes[session_id] = process
+            
+        try:
+            output, error = process.communicate(timeout=300)
+        finally:
+            if session_id and session_id in active_processes:
+                del active_processes[session_id]
         
         if process.returncode != 0:
             logger.error(f"Paramspider error: {error.strip()}")
