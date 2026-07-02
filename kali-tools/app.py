@@ -137,7 +137,7 @@ def check_active_urls():
                 return jsonify({"error": "Only .txt files are allowed"}), 400
                 
             filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            filepath = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             file.save(filepath)
             
             command = [
@@ -256,7 +256,7 @@ def url_fuzzer():
     # Secure filename and add UUID
     original_filename = secure_filename(file.filename)
     unique_filename = f"{uuid.uuid4()}_{original_filename}"
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+    filepath = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], unique_filename))
     file.save(filepath)
     
     # Validate target URL format
@@ -414,7 +414,7 @@ def crawl_url():
                 
             # Simpan file
             filename = f"{uuid.uuid4()}_{secure_filename(file.filename)}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            filepath = os.path.abspath(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             file.save(filepath)
             
             # ✅ Definisikan command untuk file
