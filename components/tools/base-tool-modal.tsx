@@ -24,7 +24,7 @@ export function BaseToolModal({
   if (!isOpen || !tool) return null
 
   return (
-    <Modal open={isOpen} onClose={onClose} closeOnOutsideClick={true}>
+    <Modal open={isOpen} onClose={onClose} closeOnOutsideClick={false}>
       <div className={`flex flex-col max-h-[80vh] w-full ${className}`}>
         <div className="border-b border-gray-800 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
           <div>
