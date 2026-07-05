@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
@@ -67,7 +68,10 @@ export const TextFilePreview = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col [&>button]:hidden">
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <DialogTitle className="flex-1 truncate pr-4">{resource.name}</DialogTitle>
+          <div>
+            <DialogTitle className="flex-1 truncate pr-4">{resource.name}</DialogTitle>
+            <DialogDescription className="sr-only">Preview payload content</DialogDescription>
+          </div>
           <div className="flex items-center gap-2">
             {resource.filePath && (
               <Button variant="outline" size="sm" onClick={handleDownload} className="h-8">

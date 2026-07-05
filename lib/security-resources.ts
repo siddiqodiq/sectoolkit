@@ -20,11 +20,11 @@ export const payloadTemplates: SecurityResource[] = [
     previewAvailable: true
   },
   {
-  id: "PT-008",
+    id: "PT-008",
     name: "Payloads by CoffinXP",
     type: "All",
     size: "-",
-    filePath: "/",
+    filePath: "",
     sourceUrl: "https://github.com/coffinxp/loxs/tree/main/payloads",
     previewAvailable: false
   },
@@ -34,13 +34,21 @@ export const payloadTemplates: SecurityResource[] = [
     type: "Yaml",
     size: "-",
     filePath: "",
-    sourceUrl: "https://github.com/coffinxp/nuclei-templates.git"
-    , previewAvailable: false
+    sourceUrl: "https://github.com/coffinxp/nuclei-templates.git",
+    previewAvailable: false
   },
-  
   {
-  id: "PT-005",
-    name: "🔥 💉XSS Bypass Payload 💉🔥 ",    
+    id: "PT-010",
+    name: "Payload PDF to XSS",
+    type: "XSS",
+    size: "18 KB",
+    filePath: "/payloads/OrwaGodfather.pdf",
+    sourceUrl: "",
+    previewAvailable: false
+  },
+  {
+    id: "PT-005",
+    name: "🔥 💉XSS Bypass Payload 💉🔥 ",
     type: "XSS",
     size: "2 KB",
     filePath: "/payloads/xssajib.txt",
@@ -49,7 +57,7 @@ export const payloadTemplates: SecurityResource[] = [
   },
   {
     id: "PT-002",
-     name: "DOS Attack Payload, for input forms to down the server",
+    name: "DOS Attack Payload, for input forms to down the server",
     type: "BAC",
     size: "4.99 MB",
     filePath: "/payloads/5mb.txt",
@@ -59,11 +67,11 @@ export const payloadTemplates: SecurityResource[] = [
   {
     id: "PT-006",
     name: "LFI Payloads",
-    type: "LFI", 
+    type: "LFI",
     size: "1 KB",
     filePath: "/payloads/lfi.txt",
     sourceUrl: "",
-    previewAvailable: true 
+    previewAvailable: true
   },
   {
     id: "PT-007",
@@ -92,9 +100,9 @@ export const payloadTemplates: SecurityResource[] = [
     sourceUrl: "",
     previewAvailable: true
   },
-  
 
-  
+
+
 ]
 
 export const wordlists: SecurityResource[] = [
@@ -125,7 +133,7 @@ export const wordlists: SecurityResource[] = [
     sourceUrl: "https://github.com/intelligencegroup-io/RockYou2024",
     previewAvailable: true,
   },
-   {
+  {
     id: "WL-004",
     name: "David Palma wordlists",
     type: "All",

@@ -99,47 +99,69 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
   const formatResultLine = (line: string) => {
     const cleanLine = cleanAnsiCodes(line);
     
-    // Handle different types of security messages
-    if (cleanLine.includes('[!] Missing security header:')) {
+    // Headers are present (Good)
+    if (cleanLine.includes('[*] Header') && cleanLine.includes('is present!')) {
+      const match = cleanLine.match(/\[\*\] Header (.+?) is present!/);
+      const headerName = match ? match[1] : '';
+      return (
+        <div className="flex items-center text-green-400 py-1">
+          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span dangerouslySetInnerHTML={{ __html: cleanLine.replace(headerName, `<span class="font-bold">${headerName}</span>`) }} />
+        </div>
+      );
+    }
+
+    // Headers are missing (Bad)
+    if (cleanLine.includes('[!] Security header missing:')) {
       const headerName = cleanLine.split(':')[1]?.trim();
       return (
         <div className="flex items-center text-red-400 py-1">
-          <XCircle className="h-4 w-4 mr-2" />
-          <span>Missing: <span className="font-medium">{headerName}</span></span>
+          <XCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span>[!] Security header missing: <span className="font-bold">{headerName}</span></span>
         </div>
       );
     }
     
-    if (cleanLine.includes('[+] There are') && cleanLine.includes('security headers')) {
-      const match = cleanLine.match(/\[+\] There are (\d+) security headers/);
-      const count = match ? match[1] : '0';
+    // Information disclosure (Warning)
+    if (cleanLine.includes('[!] Possible information disclosure:')) {
       return (
-        <div className="flex items-center text-green-400 py-1 font-medium">
-          <CheckCircle className="h-4 w-4 mr-2" />
-          <span>Found {count} security headers</span>
+        <div className="flex items-center text-yellow-400 py-1">
+          <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span>{cleanLine}</span>
         </div>
       );
     }
     
-    if (cleanLine.includes('[-] There are not') && cleanLine.includes('security headers')) {
-      const match = cleanLine.match(/\[-\] There are not (\d+) security headers/);
-      const count = match ? match[1] : '0';
+    // Summary line: Present headers
+    if (cleanLine.includes('[+]') && cleanLine.includes('present')) {
       return (
-        <div className="flex items-center text-red-400 py-1 font-medium">
-          <XCircle className="h-4 w-4 mr-2" />
-          <span>Missing {count} security headers</span>
+        <div className="flex items-center text-green-400 py-1 font-bold">
+          <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span>{cleanLine}</span>
         </div>
       );
     }
     
+    // Summary line: Missing headers
+    if (cleanLine.includes('[-]') && cleanLine.includes('missing')) {
+      return (
+        <div className="flex items-center text-red-400 py-1 font-bold">
+          <XCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span>{cleanLine}</span>
+        </div>
+      );
+    }
+    
+    // Initial analysis information
     if (cleanLine.includes('[*] Analyzing headers of') || cleanLine.includes('[*] Effective URL:')) {
       return (
-        <div className="text-blue-400 py-1">
+        <div className="text-blue-400 py-1 font-medium">
           {cleanLine}
         </div>
       );
     }
     
+    // Separators and decorative lines
     if (cleanLine.includes('======') || cleanLine.includes('------')) {
       return (
         <div className="text-gray-500 py-1">
@@ -148,7 +170,8 @@ export function SecurityHeadersModal({ tool, isOpen, onClose, onSendToChat }: Se
       );
     }
     
-    return <div className="py-1">{cleanLine}</div>;
+    // Default rendering for other text
+    return <div className="py-1 text-gray-300">{cleanLine}</div>;
   };
 
   const parseSecurityResults = (data: any) => {

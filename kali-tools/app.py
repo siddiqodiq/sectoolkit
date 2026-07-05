@@ -306,13 +306,13 @@ def url_fuzzer():
         os.remove(filepath)  # Clean up
         return jsonify({"error": "Invalid target URL format"}), 400
     
-    # Prepare ffuf command (no FUZZ replacement needed now)
+    # Prepare ffuf command
     command = [
         "/usr/local/bin/ffuf",
         "-u", target,
-        "-w", filepath,
-        "-of", "json"
+        "-w", filepath
     ]
+    logger.debug(f"Executing command: {' '.join(command)}")
     
     # Create a queue to capture output
     output_queue = Queue()
@@ -322,7 +322,7 @@ def url_fuzzer():
             process = subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
                 universal_newlines=True,
@@ -340,6 +340,7 @@ def url_fuzzer():
             for line in process.stdout:
                 with process_lock:
                     if session_id in active_processes:  # Cek jika proses belum dihentikan
+                        logger.debug(f"[Fuzzer {session_id}] {line.strip()}")
                         output_queue.put(line)
                     else:
                         break  # Keluar jika proses diminta berhenti
@@ -1228,7 +1229,7 @@ def xss_scan():
             if not is_valid_url(target_url):
                 return jsonify({"error": "Invalid target URL format"}), 400
                 
-            command.extend(["url", target_url])
+            command.extend(["url", f"'{target_url}'"])
             
             # Add cookie header if provided
             if request.form.get('cookie'):
@@ -1277,15 +1278,18 @@ def xss_scan():
         # Create output queue
         output_queue = Queue()
         
+        command_str = " ".join(command)
+        
         def run_dalfox():
             try:
                 process = subprocess.Popen(
-                    command,
+                    command_str,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
+                    shell=True,
                 preexec_fn=os.setsid
             )
                 
@@ -1294,11 +1298,8 @@ def xss_scan():
                 # Stream output line by line
                 for line in process.stdout:
                     if session_id in active_processes:
-                        # Skip banner and show only important output
-                        if not line.startswith((' ', '  ', '\n', '🌙', '    _', '  .', ' :', " '-", '   -')) \
-                           and 'Worker' not in line \
-                           and 'Started at' not in line:
-                            output_queue.put(line)
+                        logger.debug(f"[XSS-Scan {session_id}] {line.strip()}")
+                        output_queue.put(line)
                     else:
                         break
                 
@@ -1793,10 +1794,6 @@ def nuclei_scan():
                 yield "\n"  # Early flush
                 
                 while True:
-                    # Critical: Check if process was stopped
-                    if session_id not in active_processes:
-                        break
-                    
                     try:
                         line = output_queue.get(timeout=1)
                         if line is None:
@@ -1967,9 +1964,6 @@ def enumerate_params():
                 yield "\n"  # flush header early
 
                 while True:
-                    if session_id not in active_processes:
-                        break
-
                     try:
                         line = output_queue.get(timeout=1)
                         if line is None:
@@ -2157,7 +2151,7 @@ def lfi_scan():
                 process = subprocess.Popen(
                     command,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
@@ -2172,6 +2166,7 @@ def lfi_scan():
                     if session_id not in active_processes:
                         break
                     if line.strip():
+                        logger.debug(f"[LFI-Scan {session_id}] {line.strip()}")
                         if "VULNERABLE" in line or "Found" in line:
                             found_vulns = True
                         output_queue.put(line)
@@ -2199,9 +2194,7 @@ def lfi_scan():
                 yield "\n"  # Early flush
                 
                 while True:
-                    if session_id not in active_processes:
-                        break
-                    
+
                     try:
                         line = output_queue.get(timeout=1)
                         if line is None:
@@ -2275,7 +2268,7 @@ def check_headers():
             return jsonify({"error": "Invalid URL format"}), 400
 
         # Prepare command
-        command = f"cd ~/tools/shcheck && python3 shcheck.py {url}"
+        command = f"cd ~/tools/shcheck && python3 shcheck.py -d -i -k {url}"
         logger.debug(f"Executing command: {command}")
 
         # Execute command directly and wait for completion
