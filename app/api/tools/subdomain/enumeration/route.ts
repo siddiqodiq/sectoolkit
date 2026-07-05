@@ -1,10 +1,26 @@
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { logUserActivity } from '@/lib/logger';
 // app/api/tools/subdomain/enumeration/route.ts
 import { NextResponse } from 'next/server';
 import { validateDomain } from '../../utils/validators';
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
-    const { domain } = await req.json();
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      try {
+        let reqData = {};
+        try {
+          const reqClone = req.clone();
+          reqData = await reqClone.json();
+        } catch(e) {}
+        const details = typeof reqData === 'object' ? Object.entries(reqData).filter(x => x[0] !== 'session_id' && typeof x[1] === 'string').map(x => x[0] + ': ' + x[1]).join(', ') : '';
+        await logUserActivity(session.user.id, 'SCAN_START', 'Tool: enumeration' + (details ? ' - ' + details : ''));
+      } catch (e) {}
+    }
+
+    const { domain, session_id } = await req.json();
     
     const validation = validateDomain(domain);
     if (!validation.valid) {
@@ -17,7 +33,7 @@ export async function POST(req: Request) {
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ domain }),
+      body: JSON.stringify({ domain, session_id }),
     });
 
     if (!flaskResponse.ok) {

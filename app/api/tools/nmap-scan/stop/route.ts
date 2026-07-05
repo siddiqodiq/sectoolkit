@@ -3,8 +3,8 @@ import { authOptions } from '@/lib/auth';
 import { logUserActivity } from '@/lib/logger';
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,40 +16,39 @@ export async function POST(req: Request) {
           reqData = await reqClone.json();
         } catch(e) {}
         const details = typeof reqData === 'object' ? Object.entries(reqData).filter(x => x[0] !== 'session_id' && typeof x[1] === 'string').map(x => x[0] + ': ' + x[1]).join(', ') : '';
-        await logUserActivity(session.user.id, 'SCAN_STOP', 'Tool: check-headers' + (details ? ' - ' + details : ''));
+        await logUserActivity(session.user.id, 'SCAN_STOP', 'Tool: nmap-scan' + (details ? ' - ' + details : ''));
       } catch (e) {}
     }
 
     const { session_id } = await req.json();
 
     if (!session_id) {
-      return new Response('session_id is required', { status: 400 });
+      return NextResponse.json(
+        { error: 'Session ID is required' },
+        { status: 400 }
+      );
     }
 
-    console.log(`Stopping security headers check with session_id: ${session_id}`);
-
-    const response = await fetch(`${kaliToolsUrl}/api/check-headers/stop`, {
+    const flaskResponse = await fetch(`${kaliToolsUrl}/api/nmap/stop`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Failed to stop check:', error);
+    if (!flaskResponse.ok) {
+      const errorData = await flaskResponse.json().catch(() => ({ error: 'Failed to stop Nmap scan' }));
       return NextResponse.json(
-        { error: error.error || 'Failed to stop check' },
-        { status: response.status }
+        { error: errorData.error || 'Failed to stop Nmap scan' },
+        { status: flaskResponse.status }
       );
     }
 
-    console.log(`Successfully stopped check with session_id: ${session_id}`);
-    return NextResponse.json({ status: 'stopped' });
-
+    const data = await flaskResponse.json();
+    return NextResponse.json({ success: true, message: data.message });
   } catch (error) {
-    console.error('Stop check error:', error);
-    return new Response(
-      error instanceof Error ? error.message : 'Internal server error',
+    console.error('Stop Nmap scan error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

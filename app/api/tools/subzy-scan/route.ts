@@ -1,9 +1,25 @@
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { logUserActivity } from '@/lib/logger';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      try {
+        let reqData = {};
+        try {
+          const reqClone = req.clone();
+          reqData = await reqClone.json();
+        } catch(e) {}
+        const details = typeof reqData === 'object' ? Object.entries(reqData).filter(x => x[0] !== 'session_id' && typeof x[1] === 'string').map(x => x[0] + ': ' + x[1]).join(', ') : '';
+        await logUserActivity(session.user.id, 'SCAN_START', 'Tool: subzy-scan' + (details ? ' - ' + details : ''));
+      } catch (e) {}
+    }
+
     const { domain, https, verify_ssl, hide_fails } = await req.json();
 
     if (!domain) {

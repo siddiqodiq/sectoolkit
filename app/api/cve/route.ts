@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/lib/auth'
+import { logUserActivity } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,6 +13,17 @@ export async function GET(request: NextRequest) {
     searchParams.forEach((value, key) => {
       nvdUrl.searchParams.append(key, value)
     })
+
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      try {
+        const keyword = searchParams.get('keywordSearch');
+        const cveId = searchParams.get('cveId');
+        const action = cveId ? 'CVE_LOOKUP' : 'CVE_SEARCH';
+        const details = cveId || keyword || 'General Listing';
+        await logUserActivity(session.user.id, action, details);
+      } catch (e) {}
+    }
 
     const requestOptions: RequestInit = {};
     // Gunakan API key dari environment variable di sisi server (lebih aman)

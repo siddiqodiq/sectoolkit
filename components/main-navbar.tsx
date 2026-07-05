@@ -109,7 +109,13 @@ export function MainNavbar() {
                     {session?.user?.email || 'user@example.com'}
                   </p>
                 </div>
-                <DropdownMenuItem onClick={handleLogout} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer mt-1">
+                <DropdownMenuItem asChild className="text-gray-300 hover:text-white cursor-pointer mt-1">
+                  <Link href="/account/logs">
+                    <FileText className="mr-2 h-4 w-4" />
+                    <span>Activity Logs</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
@@ -176,6 +182,14 @@ export function MainNavbar() {
               </div>
             </div>
             <div className="mt-3 px-2 space-y-1">
+              <Link
+                href="/account/logs"
+                className="flex items-center w-full gap-3 block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <FileText className="h-5 w-5" />
+                Activity Logs
+              </Link>
               <button
                 onClick={handleLogout}
                 className="flex items-center w-full gap-3 block px-3 py-2 rounded-md text-base font-medium text-red-400 hover:text-red-300 hover:bg-gray-800"

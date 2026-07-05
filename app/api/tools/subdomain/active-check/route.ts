@@ -1,8 +1,24 @@
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { logUserActivity } from '@/lib/logger';
 // app/api/tools/subdomain/active-check/route.ts
 import { NextResponse } from 'next/server';
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      try {
+        let reqData = {};
+        try {
+          const reqClone = req.clone();
+          reqData = await reqClone.json();
+        } catch(e) {}
+        const details = typeof reqData === 'object' ? Object.entries(reqData).filter(x => x[0] !== 'session_id' && typeof x[1] === 'string').map(x => x[0] + ': ' + x[1]).join(', ') : '';
+        await logUserActivity(session.user.id, 'SCAN_START', 'Tool: active-check' + (details ? ' - ' + details : ''));
+      } catch (e) {}
+    }
+
     const formData = await req.formData();
     const domain = formData.get('domain') as string | null; // Pastikan nama field 'domain'
     const file = formData.get('file') as File | null;
@@ -16,6 +32,12 @@ export async function POST(req: Request) {
 
     const flaskFormData = new FormData();
     
+    // Check if session_id is provided in formData or headers
+    const sessionId = formData.get('session_id') as string | null || req.headers.get('X-Session-ID');
+    if (sessionId) {
+      flaskFormData.append('session_id', sessionId);
+    }
+
     if (file) {
       flaskFormData.append('file', file);
     } else if (domain) {

@@ -1,10 +1,26 @@
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { logUserActivity } from '@/lib/logger';
 // app/api/tools/nmap-scan/route.ts
 import { NextResponse } from 'next/server';
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
 
 export async function POST(req: Request) {
   try {
-    const { target, scan_type } = await req.json();
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      try {
+        let reqData = {};
+        try {
+          const reqClone = req.clone();
+          reqData = await reqClone.json();
+        } catch(e) {}
+        const details = typeof reqData === 'object' ? Object.entries(reqData).filter(x => x[0] !== 'session_id' && typeof x[1] === 'string').map(x => x[0] + ': ' + x[1]).join(', ') : '';
+        await logUserActivity(session.user.id, 'SCAN_START', 'Tool: nmap-scan' + (details ? ' - ' + details : ''));
+      } catch (e) {}
+    }
+
+    const { target, scan_type, session_id } = await req.json();
     
     if (!target) {
       return NextResponse.json(
@@ -24,7 +40,7 @@ export async function POST(req: Request) {
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/nmap`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target, scan_type })
+      body: JSON.stringify({ target, scan_type, session_id })
     });
 
     if (!flaskResponse.ok) {

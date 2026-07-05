@@ -32,6 +32,16 @@ interface WordlistTableProps {
 export const WordlistTable = ({ data }: WordlistTableProps) => {
   const [selectedResource, setSelectedResource] = useState<any>(null)
 
+  const logAction = async (action: string, details: string) => {
+    try {
+      await fetch('/api/user/log-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, details })
+      })
+    } catch (e) {}
+  }
+
   return (
     <>
       <ScrollArea className="h-[400px] md:h-[500px] w-full">
@@ -58,7 +68,10 @@ export const WordlistTable = ({ data }: WordlistTableProps) => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => setSelectedResource(wordlist)}
+                          onClick={() => {
+                            setSelectedResource(wordlist)
+                            logAction('WORDLIST_PREVIEW', `Previewed wordlist: ${wordlist.name}`)
+                          }}
                         >
                           <FileText className="h-4 w-4 mr-2" /> Preview
                         </Button>
@@ -74,6 +87,7 @@ export const WordlistTable = ({ data }: WordlistTableProps) => {
                             download 
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={() => logAction('WORDLIST_DOWNLOAD', `Downloaded wordlist: ${wordlist.name}`)}
                           >
                             <Download className="h-4 w-4" />
                           </a>
@@ -88,6 +102,7 @@ export const WordlistTable = ({ data }: WordlistTableProps) => {
                             href={wordlist.sourceUrl} 
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={() => logAction('WORDLIST_VIEW_SOURCE', `Viewed external wordlist source: ${wordlist.name}`)}
                           >
                             <ExternalLink className="h-4 w-4" />
                           </a>

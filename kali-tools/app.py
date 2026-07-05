@@ -101,6 +101,7 @@ def allowed_file(filename):
 def scan():
     data = request.json
     domain = data.get('domain')
+    session_id = request.headers.get('X-Session-ID') or data.get('session_id') or str(uuid.uuid4())
     
     if not domain:
         return jsonify({"error": "Domain is required"}), 400
@@ -111,15 +112,37 @@ def scan():
     
     try:
         logging.debug(f"Executing command: {' '.join(command)}")
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        stdout = result.stdout.decode("utf-8")
-        logging.debug(f"Command output: {stdout}")
-        return jsonify({"output": stdout})
-    except subprocess.CalledProcessError as e:
-        stderr = e.stderr.decode("utf-8")
-        logging.error(f"Command error: {stderr}")
-        return jsonify({"error": stderr}), 500
+        
+        process = subprocess.Popen(
+            command, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        
+        with process_lock:
+            active_processes[session_id] = process
+            
+        stdout, stderr = process.communicate()
+        
+        with process_lock:
+            active_processes.pop(session_id, None)
+            
+        if process.returncode != 0:
+            error_msg = stderr.decode("utf-8")
+            logging.error(f"Command error: {error_msg}")
+            return jsonify({"error": error_msg}), 500
+            
+        output_str = stdout.decode("utf-8")
+        logging.debug(f"Command output: {output_str}")
+        
+        response = jsonify({"output": output_str})
+        response.headers['X-Session-ID'] = session_id
+        return response
+        
     except Exception as e:
+        with process_lock:
+            active_processes.pop(session_id, None)
         logging.error(f"Unexpected error: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
@@ -172,24 +195,42 @@ def check_active_urls():
         else:
             return jsonify({"error": "Either provide a file or domain"}), 400
         
-        # Execute command and capture output directly
-        result = subprocess.run(
+        session_id = request.headers.get('X-Session-ID') or request.form.get('session_id') or str(uuid.uuid4())
+
+        # Execute command with Popen to allow tracking
+        process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=300,
-            text=True
+            text=True,
+            preexec_fn=os.setsid
         )
         
-        logger.debug(f"Command executed: {' '.join(command)}")
-        logger.debug(f"Return code: {result.returncode}")
-        logger.debug(f"stdout: {result.stdout}")
-        logger.debug(f"stderr: {result.stderr}")
+        with process_lock:
+            active_processes[session_id] = process
+            
+        try:
+            stdout, stderr = process.communicate(timeout=300)
+            result_returncode = process.returncode
+        finally:
+            with process_lock:
+                active_processes.pop(session_id, None)
         
-        if result.returncode != 0:
-            error_msg = result.stderr.strip() or "httpx command failed"
+        logger.debug(f"Command executed: {' '.join(command)}")
+        logger.debug(f"Return code: {result_returncode}")
+        logger.debug(f"stdout: {stdout}")
+        logger.debug(f"stderr: {stderr}")
+        
+        if result_returncode != 0:
+            error_msg = stderr.strip() if stderr else "httpx command failed"
             logger.error(f"Command failed: {error_msg}")
             return jsonify({"error": error_msg}), 500
+            
+        # Simulate result object for the rest of the code
+        class DummyResult:
+            pass
+        result = DummyResult()
+        result.stdout = stdout
         
         # Parse JSON output from httpx
         if result.stdout:
@@ -283,8 +324,9 @@ def url_fuzzer():
                 stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
-                universal_newlines=True
-            )
+                universal_newlines=True,
+            preexec_fn=os.setsid
+        )
             
             # Simpan proses dan filepath ke dictionary
             with process_lock:
@@ -355,7 +397,19 @@ def cleanup_resources_fuzz(session_id, filepath=None):
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 logger.debug(f"Forcing kill for session_id: {session_id}")
-                process.kill()
+                try:
+                    import signal
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except Exception:
+                    try:
+
+                        import os, signal
+
+                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                    except Exception:
+
+                        process.kill()
             except Exception as e:
                 logger.error(f"Error terminating process: {str(e)}")
         
@@ -483,7 +537,19 @@ def stop_crawlurl():
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         except Exception as e:
             logger.error(f"Failed to kill process group: {e}")
-            process.kill()
+            try:
+                import signal
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            except Exception:
+                try:
+
+                    import os, signal
+
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                except Exception:
+
+                    process.kill()
         del active_processes[session_id]
         logger.info(f"Killed paramspider process for session {session_id}")
         return jsonify({"status": "success", "message": "Crawler stopped"})
@@ -539,7 +605,19 @@ def execute_paramspider(command: list, session_id: str = None):
         return output
         
     except subprocess.TimeoutExpired:
-        process.kill()
+        try:
+            import signal
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        except Exception:
+            try:
+
+                import os, signal
+
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+            except Exception:
+
+                process.kill()
         logger.error("Paramspider execution timed out")
         return None
     except Exception as e:
@@ -594,6 +672,7 @@ def cleanup_results():
 def check_waf():
     data = request.json
     domain = data.get('domain')
+    session_id = request.headers.get('X-Session-ID') or data.get('session_id') or str(uuid.uuid4())
     
     if not domain:
         return jsonify({"error": "Domain is required"}), 400
@@ -604,18 +683,73 @@ def check_waf():
     
     try:
         logging.debug(f"Executing command: {' '.join(command)}")
-        result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-        stdout = result.stdout.decode("utf-8")
-        logging.debug(f"Command output: {stdout}")
-        return jsonify({"output": stdout})
-    except subprocess.CalledProcessError as e:
-        stderr = e.stderr.decode("utf-8")
-        logging.error(f"Command error: {stderr}")
-        return jsonify({"error": stderr}), 500
+        
+        process = subprocess.Popen(
+            command, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid
+        )
+        
+        with process_lock:
+            active_processes[session_id] = process
+            
+        stdout, stderr = process.communicate()
+        
+        with process_lock:
+            active_processes.pop(session_id, None)
+            
+        if process.returncode != 0:
+            error_msg = stderr.decode("utf-8")
+            logging.error(f"Command error: {error_msg}")
+            return jsonify({"error": error_msg}), 500
+            
+        output_str = stdout.decode("utf-8")
+        logging.debug(f"Command output: {output_str}")
+        
+        response = jsonify({"output": output_str})
+        response.headers['X-Session-ID'] = session_id
+        return response
+        
     except Exception as e:
+        with process_lock:
+            active_processes.pop(session_id, None)
         logging.error(f"Unexpected error: {str(e)}")
-    
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/waf/stop', methods=['POST'])
+def stop_waf():
+    data = request.json
+    if not data or 'session_id' not in data:
+        return jsonify({"error": "Session ID is required"}), 400
+
+    session_id = data['session_id']
+    
+    with process_lock:
+        if session_id not in active_processes:
+            return jsonify({"error": "Scan session not found or already completed"}), 404
+            
+        process = active_processes[session_id]
+        
+    try:
+        import signal
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        
+        with process_lock:
+            active_processes.pop(session_id, None)
+            
+        return jsonify({"message": "WAF scan stopped successfully"}), 200
+    except Exception as e:
+        logger.error(f"Failed to stop scan: {str(e)}")
+        try:
+            process.kill()
+            with process_lock:
+                active_processes.pop(session_id, None)
+            return jsonify({"message": "WAF scan force stopped"}), 200
+        except Exception:
+            pass
+        return jsonify({"error": f"Failed to stop scan: {str(e)}"}), 500
+
     
 @app.route('/api/deepcrawl', methods=['POST'])
 def deep_crawl():
@@ -660,7 +794,8 @@ def deep_crawl():
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
+            preexec_fn=os.setsid
         )
 
         output, error = process.communicate(timeout=900)  # timeout 15 menit
@@ -683,7 +818,19 @@ def deep_crawl():
         })
 
     except subprocess.TimeoutExpired:
-        process.kill()
+        try:
+            import signal
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        except Exception:
+            try:
+
+                import os, signal
+
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+            except Exception:
+
+                process.kill()
         logger.error("Katana execution timed out")
         return jsonify({"error": "Scan timed out after 15 minutes"}), 504
     except Exception as e:
@@ -826,33 +973,52 @@ def nmap_scan():
         command = commands[scan_type]
         logger.debug(f"Executing: {' '.join(command)}")
 
+        session_id = request.headers.get('X-Session-ID') or data.get('session_id') or str(uuid.uuid4())
+        
         # Eksekusi command
-        result = subprocess.run(
+        process = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=600  # Timeout 10 menit
+            preexec_fn=os.setsid
         )
+        
+        with process_lock:
+            active_processes[session_id] = process
+            
+        try:
+            stdout, stderr = process.communicate(timeout=600)  # Timeout 10 menit
+            result_returncode = process.returncode
+        finally:
+            with process_lock:
+                active_processes.pop(session_id, None)
 
-        if result.returncode != 0:
-            error_msg = result.stderr.strip() or "Nmap command failed"
+        if result_returncode != 0:
+            error_msg = stderr.strip() if stderr else "Nmap command failed"
             logger.error(f"Nmap error: {error_msg}")
             return jsonify({"error": error_msg}), 500
 
         # Parse output nmap
-        output = result.stdout.strip()
-        return jsonify({
+        output = stdout.strip()
+        
+        response = jsonify({
             "status": "success",
             "scan_type": scan_type,
             "results": output,
             "command": ' '.join(command)
         })
+        response.headers['X-Session-ID'] = session_id
+        return response
 
     except subprocess.TimeoutExpired:
+        with process_lock:
+            active_processes.pop(session_id, None)
         logger.error("Nmap execution timed out")
         return jsonify({"error": "Scan timed out after 10 minutes"}), 504
     except Exception as e:
+        with process_lock:
+            active_processes.pop(session_id, None)
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
     
@@ -973,8 +1139,9 @@ def openredirect_scan():
                     stderr=subprocess.PIPE,
                     text=True,
                     bufsize=1,
-                    universal_newlines=True
-                )
+                    universal_newlines=True,
+                preexec_fn=os.setsid
+            )
 
                 # Flag untuk mendeteksi hasil
                 found_vulnerabilities = False
@@ -1105,8 +1272,9 @@ def xss_scan():
                     stderr=subprocess.PIPE,
                     text=True,
                     bufsize=1,
-                    universal_newlines=True
-                )
+                    universal_newlines=True,
+                preexec_fn=os.setsid
+            )
                 
                 active_processes[session_id] = process
                 
@@ -1299,8 +1467,9 @@ def sqlmap_scan():
                     stderr=subprocess.PIPE,
                     text=True,
                     bufsize=1,
-                    universal_newlines=True
-                )
+                    universal_newlines=True,
+                preexec_fn=os.setsid
+            )
                 
                 active_processes[session_id] = process
                 logger.info(f"Started SQLMap scan with PID: {process.pid}")
@@ -1364,7 +1533,19 @@ def stop_sqlmap_scan():
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                process.kill()
+                try:
+                    import signal
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except Exception:
+                    try:
+
+                        import os, signal
+
+                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                    except Exception:
+
+                        process.kill()
             # Gunakan pop agar tidak error jika key sudah hilang
             active_processes.pop(session_id, None)
             return jsonify({"status": "stopped"})
@@ -1420,8 +1601,9 @@ def dnsrecon_scan():
                     stderr=subprocess.PIPE,
                     text=True,
                     bufsize=1,
-                    universal_newlines=True
-                )
+                    universal_newlines=True,
+                preexec_fn=os.setsid
+            )
                 
                 active_processes[session_id] = process
                 logger.info(f"Started DNSRecon scan for {domain} (PID: {process.pid})")
@@ -1490,7 +1672,19 @@ def stop_dnsrecon():
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                process.kill()
+                try:
+                    import signal
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except Exception:
+                    try:
+
+                        import os, signal
+
+                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                    except Exception:
+
+                        process.kill()
             
             del active_processes[session_id]
             return jsonify({"status": "stopped"})
@@ -1552,7 +1746,8 @@ def nuclei_scan():
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
-                    shell=True
+                    shell=True,
+                    preexec_fn=os.setsid
                 )
                 
                 active_processes[session_id] = process
@@ -1619,7 +1814,19 @@ def stop_nuclei_scan():
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 # Force kill if not responding
-                process.kill()
+                try:
+                    import signal
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except Exception:
+                    try:
+
+                        import os, signal
+
+                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                    except Exception:
+
+                        process.kill()
             
             # Ensure cleanup
             active_processes.pop(session_id, None)
@@ -1697,7 +1904,8 @@ def enumerate_params():
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
-                    shell=True
+                    shell=True,
+                    preexec_fn=os.setsid
                 )
                 
                 active_processes[session_id] = process
@@ -1770,7 +1978,19 @@ def stop_enumeration():
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                process.kill()
+                try:
+                    import signal
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except Exception:
+                    try:
+
+                        import os, signal
+
+                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                    except Exception:
+
+                        process.kill()
             
             del active_processes[session_id]
             return jsonify({"status": "stopped"})
@@ -1808,8 +2028,9 @@ def subzy_scan():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            universal_newlines=True
-        )
+            universal_newlines=True,
+        preexec_fn=os.setsid
+    )
 
         stdout, stderr = process.communicate()
 
@@ -1916,6 +2137,7 @@ def lfi_scan():
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
+            preexec_fn=os.setsid,
                     shell=True,
                     cwd=os.path.expanduser('~/tools/loxs')
                 )
@@ -1992,7 +2214,19 @@ def stop_lfi_scan():
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                process.kill()
+                try:
+                    import signal
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except Exception:
+                    try:
+
+                        import os, signal
+
+                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                    except Exception:
+
+                        process.kill()
             
             active_processes.pop(session_id, None)
             return jsonify({"status": "stopped"})
@@ -2066,7 +2300,19 @@ def stop_header_check():
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                process.kill()
+                try:
+                    import signal
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                except Exception:
+                    try:
+
+                        import os, signal
+
+                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
+                    except Exception:
+
+                        process.kill()
             
             active_processes.pop(session_id, None)
             return jsonify({"status": "stopped"})
@@ -2085,3 +2331,70 @@ if __name__ == '__main__':
     setup_go_environment()
     logging.basicConfig(level=logging.DEBUG)
     socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+
+@app.route('/api/scan/stop', methods=['POST'])
+def stop_scan():
+    data = request.json
+    if not data or 'session_id' not in data:
+        return jsonify({"error": "Session ID is required"}), 400
+
+    session_id = data['session_id']
+    
+    with process_lock:
+        if session_id not in active_processes:
+            return jsonify({"error": "Scan session not found or already completed"}), 404
+            
+        process = active_processes[session_id]
+        
+    try:
+        import signal
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        
+        with process_lock:
+            active_processes.pop(session_id, None)
+            
+        return jsonify({"message": "Scan stopped successfully"}), 200
+    except Exception as e:
+        logger.error(f"Failed to stop scan: {str(e)}")
+        # Try graceful fallback
+        try:
+            process.kill()
+            with process_lock:
+                active_processes.pop(session_id, None)
+            return jsonify({"message": "Scan force stopped"}), 200
+        except Exception:
+            pass
+        return jsonify({"error": f"Failed to stop scan: {str(e)}"}), 500
+
+@app.route('/api/nmap/stop', methods=['POST'])
+def stop_nmap():
+    data = request.json
+    if not data or 'session_id' not in data:
+        return jsonify({"error": "Session ID is required"}), 400
+
+    session_id = data['session_id']
+    
+    with process_lock:
+        if session_id not in active_processes:
+            return jsonify({"error": "Scan session not found or already completed"}), 404
+            
+        process = active_processes[session_id]
+        
+    try:
+        import signal
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        
+        with process_lock:
+            active_processes.pop(session_id, None)
+            
+        return jsonify({"message": "Nmap scan stopped successfully"}), 200
+    except Exception as e:
+        logger.error(f"Failed to stop scan: {str(e)}")
+        try:
+            process.kill()
+            with process_lock:
+                active_processes.pop(session_id, None)
+            return jsonify({"message": "Nmap scan force stopped"}), 200
+        except Exception:
+            pass
+        return jsonify({"error": f"Failed to stop scan: {str(e)}"}), 500

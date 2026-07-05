@@ -3,6 +3,7 @@ import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import prisma from './db'
 import bcrypt from 'bcryptjs'
+import { logUserActivity } from './logger'
 
 import type { User as NextAuthUser, Session as NextAuthSession } from 'next-auth'
 
@@ -69,6 +70,22 @@ export const authOptions: NextAuthOptions = {
         session.user.username = token.username as string
       }
       return session
+    }
+  },
+  events: {
+    async signIn(message) {
+      if (message.user) {
+        try {
+          await logUserActivity(message.user.id, 'LOGIN', `Logged in via ${message.account?.provider || 'credentials'}`);
+        } catch (e) {}
+      }
+    },
+    async signOut(message) {
+      if (message.token?.id) {
+        try {
+          await logUserActivity(message.token.id as string, 'LOGOUT', 'Logged out');
+        } catch (e) {}
+      }
     }
   },
   pages: {

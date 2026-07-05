@@ -31,6 +31,16 @@ interface PayloadTableProps {
 export const PayloadTable = ({ data }: PayloadTableProps) => {
   const [selectedResource, setSelectedResource] = useState<any>(null)
 
+  const logAction = async (action: string, details: string) => {
+    try {
+      await fetch('/api/user/log-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, details })
+      })
+    } catch (e) {}
+  }
+
   const downloadFile = async (filePath: string, fileName: string) => {
   try {
     // Hapus 'public/' dari path karena Next.js secara otomatis melayani dari public
@@ -79,7 +89,10 @@ export const PayloadTable = ({ data }: PayloadTableProps) => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => setSelectedResource(payload)}
+                          onClick={() => {
+                            setSelectedResource(payload)
+                            logAction('PAYLOAD_PREVIEW', `Previewed payload: ${payload.name}`)
+                          }}
                         >
                           <FileText className="h-4 w-4 mr-2" /> Preview
                         </Button>
@@ -93,6 +106,7 @@ export const PayloadTable = ({ data }: PayloadTableProps) => {
                         <a 
                           href={payload.filePath.replace('public/', '/')} 
                           download={`${payload.name.toLowerCase().replace(/\s+/g, '-')}.txt`}
+                          onClick={() => logAction('PAYLOAD_DOWNLOAD', `Downloaded payload: ${payload.name}`)}
                         >
                           <Download className="h-4 w-4" />
                         </a>
@@ -107,6 +121,7 @@ export const PayloadTable = ({ data }: PayloadTableProps) => {
                             href={payload.sourceUrl} 
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={() => logAction('PAYLOAD_VIEW_SOURCE', `Viewed external payload source: ${payload.name}`)}
                           >
                             <ExternalLink className="h-4 w-4" />
                           </a>

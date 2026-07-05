@@ -1,6 +1,6 @@
 // components/tools/nmap-scan-modal.tsx
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { BaseToolModal } from "./base-tool-modal";
 import { Tool } from "@/lib/tools";
 import { 
@@ -26,10 +26,12 @@ import {
   Network,
   Server,
   Zap,
-  Lock
+  Lock,
+  StopCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 interface NmapScanModalProps {
   tool: Tool;
@@ -79,6 +81,54 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
   const [scanType, setScanType] = useState("3"); // Default to Web Service Detection
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  const stopScan = async () => {
+    if (!sessionId) return;
+    try {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const stopResponse = await fetch('/api/tools/nmap-scan/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      if (!stopResponse.ok) throw new Error('Failed to stop scan');
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+      setSessionId(null);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleCloseAttempt = () => {
+    if (isLoading) {
+      setShowConfirmClose(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const confirmClose = async () => {
+    if (isLoading && sessionId) {
+      await stopScan();
+    }
+    setShowConfirmClose(false);
+    onClose();
+  };
 
   const handleRunScan = async () => {
     if (!target) {
@@ -89,12 +139,16 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
     setIsLoading(true);
     setError(null);
     setResults("");
+    abortControllerRef.current = new AbortController();
+    const newSessionId = crypto.randomUUID();
+    setSessionId(newSessionId);
 
     try {
       const response = await fetch('/api/tools/nmap-scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target, scan_type: scanType })
+        body: JSON.stringify({ target, scan_type: scanType, session_id: newSessionId }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
@@ -109,7 +163,10 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
         title: "Scan completed",
         description: `Nmap ${scanTypes.find(t => t.id === scanType)?.name} scan finished`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return;
+      }
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       setError(errorMessage);
       
@@ -120,6 +177,8 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
       });
     } finally {
       setIsLoading(false);
+      setSessionId(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -143,7 +202,8 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
   };
 
   return (
-    <BaseToolModal tool={tool} isOpen={isOpen} onClose={onClose}>
+    <>
+      <BaseToolModal tool={tool} isOpen={isOpen} onClose={handleCloseAttempt}>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <Card>
           <CardHeader>
@@ -204,23 +264,35 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
             </Alert>
           </CardContent>
           <CardFooter>
-            <Button
-              onClick={handleRunScan}
-              disabled={isLoading || !target}
-              className="w-full"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Scanning...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Run Nmap Scan
-                </>
+            <div className="flex gap-2 w-full">
+              <Button
+                onClick={handleRunScan}
+                disabled={isLoading || !target}
+                className="flex-1"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-4 w-4" />
+                    Run Nmap Scan
+                  </>
+                )}
+              </Button>
+              {isLoading && (
+                <Button
+                  onClick={stopScan}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <StopCircle className="mr-2 h-4 w-4" />
+                  Stop Scan
+                </Button>
               )}
-            </Button>
+            </div>
           </CardFooter>
         </Card>
 
@@ -275,5 +347,28 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
         )}
       </div>
     </BaseToolModal>
+
+      <Dialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Scan Process?</DialogTitle>
+            <DialogDescription>
+              The Nmap scanner is still running. If you close now, the process will be cancelled.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Continue Scan</Button>
+            </DialogClose>
+            <Button 
+              variant="destructive" 
+              onClick={confirmClose}
+            >
+              Cancel and Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
