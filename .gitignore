@@ -30,3 +30,4 @@ db/
 
 struktur.py
 /uploads
+/kali-tools/__pycache__

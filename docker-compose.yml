@@ -40,7 +40,11 @@ services:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      KALI_TOOLS_URL: http://kali-tools:5000
+      # Nama env harus KALI_TOOLS (route.ts membaca process.env.KALI_TOOLS)
+      KALI_TOOLS: http://kali-tools:5000
+      # Kunci internal opsional (kirim ke Flask lewat header X-Internal-Key).
+      # Aktif hanya bila di-set di file .env pada kedua service.
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     networks:
       - pungoe_network
     restart: unless-stopped
@@ -53,14 +57,19 @@ services:
       - .env
     container_name: pungoe_kali_tools
     hostname: kali-tools
-    ports:
-      - "5000:5000"
+    # Port 5000 TIDAK dipublish ke host. Backend hanya bisa diakses dari dalam
+    # jaringan Docker (oleh service `app`), sehingga tidak bisa melewati auth Next.js.
+    # Untuk debugging lokal, buka sementara dengan: "127.0.0.1:5000:5000".
+    expose:
+      - "5000"
     volumes:
       - ./kali-tools:/app
       - ./uploads:/app/uploads
     environment:
       FLASK_ENV: production
       POSTGRES_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      # Bila di-set, Flask mewajibkan header X-Internal-Key yang cocok pada semua request.
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     networks:
       - pungoe_network
     restart: unless-stopped
