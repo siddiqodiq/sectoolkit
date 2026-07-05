@@ -14,6 +14,7 @@ RUN mkdir -p /app/uploads $TOOLS_DIR /usr/local/bin /root/bin && \
     chmod 775 /usr/local/bin
 
 RUN apt install -y \
+    curl \
     git \
     golang-go \
     python3 \
@@ -48,6 +49,7 @@ RUN go install github.com/hahwul/dalfox/v2@latest
 RUN go install github.com/projectdiscovery/katana/cmd/katana@v1.1.0
 RUN go install github.com/tomnomnom/qsreplace@latest
 RUN go install github.com/lc/gau/v2/cmd/gau@latest
+RUN curl -s https://raw.githubusercontent.com/lc/gau/refs/heads/master/.gau.toml > ~/.gau.toml
 RUN go install github.com/PentestPad/subzy@latest
 RUN ln -s /go/bin/* /usr/local/bin/
 
@@ -77,23 +79,23 @@ WORKDIR $TOOLS_DIR
 RUN git clone https://github.com/s0md3v/Corsy $TOOLS_DIR/Corsy && \
     cd $TOOLS_DIR/Corsy && \
     if [ -f "requirements.txt" ]; then \
-        python3 -m venv venv && \
-        venv/bin/pip install --no-cache-dir -r requirements.txt; \
+    python3 -m venv venv && \
+    venv/bin/pip install --no-cache-dir -r requirements.txt; \
     fi
 
 # Oralyzer
 RUN git clone https://github.com/r0075h3ll/Oralyzer $TOOLS_DIR/Oralyzer && \
     cd $TOOLS_DIR/Oralyzer && \
     if [ -f "requirements.txt" ]; then \
-        pip3 install --no-cache-dir --break-system-packages -r requirements.txt; \
+    pip3 install --no-cache-dir --break-system-packages -r requirements.txt; \
     fi
 
 # loxs LFI Scanner
 RUN git clone https://github.com/siddiqodiq/LFI-Exploiter $TOOLS_DIR/loxs && \
     cd $TOOLS_DIR/loxs && \
     if [ -f "requirements.txt" ]; then \
-        python3 -m venv venv && \
-        venv/bin/pip install --no-cache-dir -r requirements.txt; \
+    python3 -m venv venv && \
+    venv/bin/pip install --no-cache-dir -r requirements.txt; \
     fi 
 
 # shcheck Security Headers Checker
