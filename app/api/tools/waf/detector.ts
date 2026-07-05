@@ -11,7 +11,7 @@ interface WAFDetectionResult {
       // Panggil backend Flask untuk WAF detection
       const flaskResponse = await fetch(`${kaliToolsUrl}/api/waf`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
         body: JSON.stringify({ url })
       });
   

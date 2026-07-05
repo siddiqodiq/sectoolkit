@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     // Panggil backend Flask dengan format yang DIA HARUSKAN
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/waf`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ domain: targetDomain, session_id }) // Pastikan format ini sesuai Flask
     });
 

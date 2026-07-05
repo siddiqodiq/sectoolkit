@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
     const response = await fetch(`${kaliToolsUrl}/api/subzy-scan`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ 
         domain,
         https: https || false,

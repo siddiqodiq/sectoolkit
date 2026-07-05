@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       const flaskResponse = await fetch(`${kaliToolsUrl}/api/crawlurl`, {
         method: 'POST',
         headers: {
+          'X-Internal-Key': process.env.INTERNAL_API_KEY || '',
           ...(sessionId ? { 'X-Session-ID': sessionId } : {})
         },
         body: flaskFormData
@@ -70,8 +71,9 @@ export async function POST(req: Request) {
       const sessionId = req.headers.get('x-session-id');
       const flaskResponse = await fetch(`${kaliToolsUrl}/api/crawlurl`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
+          'X-Internal-Key': process.env.INTERNAL_API_KEY || '',
           ...(sessionId ? { 'X-Session-ID': sessionId } : {})
         },
         body: JSON.stringify({ domain })

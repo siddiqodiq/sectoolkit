@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/scan`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ domain, session_id }),
     });
 

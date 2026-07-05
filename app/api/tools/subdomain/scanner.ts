@@ -9,7 +9,7 @@ interface ScanOptions {
     // Implementasi khusus subdomain scanning
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/scan`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ domain, ...options })
     });
   

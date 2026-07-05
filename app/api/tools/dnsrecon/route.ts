@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     // Forward to Flask backend
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/dnsrecon`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ domain }),
       signal: req.signal || undefined,
     });

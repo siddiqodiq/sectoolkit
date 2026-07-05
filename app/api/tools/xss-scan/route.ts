@@ -55,6 +55,7 @@ export async function POST(req: Request) {
 
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/xss-scan`, {
       method: 'POST',
+      headers: { 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: flaskFormData,
       signal: req.signal || undefined,
     });

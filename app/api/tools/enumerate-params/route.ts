@@ -44,6 +44,7 @@ export async function POST(req: Request) {
 
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/enumerate-params`, {
       method: 'POST',
+      headers: { 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: flaskFormData,
       signal: req.signal || undefined,
     });

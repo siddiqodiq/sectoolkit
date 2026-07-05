@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
     const response = await fetch(`${kaliToolsUrl}/api/check-headers/stop`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ session_id }),
     });
 

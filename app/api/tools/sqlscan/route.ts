@@ -43,6 +43,7 @@ export async function POST(req: Request) {
     // Forward FormData ke backend Flask
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/sqlscan`, {
       method: 'POST',
+      headers: { 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: formData,
       signal: req.signal || undefined,
     });

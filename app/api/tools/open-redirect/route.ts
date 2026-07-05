@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     // Forward to Flask backend and return the raw text response
     const flaskResponse = await fetch(`${kaliToolsUrl}/api/openredirect`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Internal-Key': process.env.INTERNAL_API_KEY || '' },
       body: JSON.stringify({ url })
     });
 
