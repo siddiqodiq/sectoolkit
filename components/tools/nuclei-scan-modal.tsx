@@ -107,7 +107,7 @@ const formatResultLine = (line: string) => {
   }
   
   // For non-vulnerability lines (info, warnings, etc.)
-  return <div className="font-mono text-sm">{cleanLine.trim()}</div>;
+  return <div className="font-mono text-sm whitespace-pre-wrap">{cleanLine}</div>;
 };
 
   const handleRunTool = async () => {
@@ -163,13 +163,13 @@ const formatResultLine = (line: string) => {
       accumulatedText = lines.pop() || '';
 
       for (const line of lines) {
-        if (line.trim()) {
+        if (line !== '') {
           setResults(prev => [...prev, line]);
         }
       }
     }
 
-    if (accumulatedText.trim()) {
+    if (accumulatedText !== '') {
       setResults(prev => [...prev, accumulatedText]);
       hasOutput = true;
     }
@@ -355,6 +355,7 @@ const formatResultLine = (line: string) => {
                       <SelectValue placeholder="Select scan type" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="general">General Scan</SelectItem>
                       <SelectItem value="single">Specific Vulnerability</SelectItem>
                       <SelectItem value="all">Comprehensive Scan</SelectItem>
                     </SelectContent>
@@ -387,10 +388,10 @@ const formatResultLine = (line: string) => {
               <Alert className="bg-gray-800/50 border-gray-700">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-xs">
-                  <p>• Comprehensive scan will check for all vulnerability types but takes longer</p>
-                  <p>• Specific vulnerability scan is faster but only checks one type</p>
-                  <p>• The scan may take several minutes depending on the target size</p>
-                  <p>• Stopping the scan is only possible after the first output appears</p>
+                  <p>• <b>General Scan:</b> Standard nuclei scan against the target without crawling/filtering.</p>
+                  <p>• <b>Comprehensive Scan:</b> Crawls and checks all vulnerability types but takes longer.</p>
+                  <p>• <b>Specific Vulnerability:</b> Faster but only checks one specific type of vulnerability.</p>
+                  <p>• The scan may take several minutes depending on the target size.</p>
                 </AlertDescription>
               </Alert>
             </CardContent>

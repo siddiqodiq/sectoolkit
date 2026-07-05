@@ -1722,6 +1722,8 @@ def nuclei_scan():
                 f"gf {pattern} | "
                 f"nuclei -t ~/nuclei-templates/dast/vulnerabilities/{pattern} -dast"
             )
+        elif scan_type == 'general':
+            command = f"nuclei -u '{target}'"
         else:
             command = (
                 f"echo '{target}' | "
@@ -1730,34 +1732,38 @@ def nuclei_scan():
                 f"gf lfi redirect sqli-error sqli ssrf ssti xss xxe | "
                 f"qsreplace FUZZ | "
                 f"grep FUZZ | "
-                f"nuclei -silent -t ~/nuclei-templates/dast/vulnerabilities -dast"
+                f"nuclei -t ~/nuclei-templates/dast/vulnerabilities -dast"
             )
         
         logger.debug(f"Executing Nuclei scan: {command}")
         
         output_queue = Queue()
         
-        def run_scan():
+        try:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                shell=True,
+                preexec_fn=os.setsid
+            )
+            active_processes[session_id] = process
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+            
+        def read_output():
             try:
-                process = subprocess.Popen(
-                    command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                    shell=True,
-                    preexec_fn=os.setsid
-                )
-                
-                active_processes[session_id] = process
-                
                 for line in process.stdout:
                     if session_id not in active_processes:  # Check if stopped
                         break
+                    logger.debug(f"[Nuclei {session_id}] {line.strip()}")
                     output_queue.put(line)
                 
                 process.wait()
+                logger.debug(f"Nuclei scan {session_id} completed.")
                 output_queue.put(None)
             except Exception as e:
                 output_queue.put(f"[ERROR] {str(e)}")
@@ -1765,7 +1771,7 @@ def nuclei_scan():
             finally:
                 active_processes.pop(session_id, None)
         
-        Thread(target=run_scan).start()
+        Thread(target=read_output).start()
         
         def generate():
             try:
@@ -1894,22 +1900,24 @@ def enumerate_params():
         # Create output queue
         output_queue = Queue()
         
-        def run_enumeration():
+        try:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+                shell=True,
+                preexec_fn=os.setsid
+            )
+            active_processes[session_id] = process
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+            
+        def read_output():
             nonlocal found_params
             try:
-                process = subprocess.Popen(
-                    command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                    shell=True,
-                    preexec_fn=os.setsid
-                )
-                
-                active_processes[session_id] = process
-                
                 # Stream output
                 for line in process.stdout:
                     if session_id in active_processes:
@@ -1932,7 +1940,7 @@ def enumerate_params():
                     os.remove(filepath)
                 active_processes.pop(session_id, None)
         
-        Thread(target=run_enumeration).start()
+        Thread(target=read_output).start()
         
         def generate():
             try:

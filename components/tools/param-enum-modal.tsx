@@ -403,56 +403,66 @@ export function ParamEnumModal({ tool, isOpen, onClose, onSendToChat }: ParamEnu
             </CardFooter>
           </Card>
 
-          {results.length > 0 && (
+          {(results.length > 0 || isLoading) && (
             <Card>
               <CardHeader>
                 <CardTitle>Enumeration Results ({pattern})</CardTitle>
                 <CardDescription>
-                  Found {results.length} parameter patterns
+                  {isLoading ? 'Scanning for parameters...' : `Found ${results.length} parameter patterns`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="relative">
-                  <div className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto space-y-2">
-                    {results.map((result, index) => (
-                      <div key={index}>
-                        {formatResultLine(result)}
+                  {results.length > 0 ? (
+                    <>
+                      <div className="bg-black p-4 rounded-md font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto space-y-2">
+                        {results.map((result, index) => (
+                          <div key={index}>
+                            {formatResultLine(result)}
+                          </div>
+                        ))}
+                        <div ref={resultsEndRef} />
                       </div>
-                    ))}
-                    <div ref={resultsEndRef} />
-                  </div>
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => {
-                        navigator.clipboard.writeText(results.join('\n'));
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                      }}
-                      aria-label="Copy results"
-                    >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleDownloadResults}
-                      aria-label="Download results"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    {onSendToChat && (
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => onSendToChat(results.join('\n'))}
-                        aria-label="Send to chat"
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => {
+                            navigator.clipboard.writeText(results.join('\n'));
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          aria-label="Copy results"
+                        >
+                          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={handleDownloadResults}
+                          aria-label="Download results"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        {onSendToChat && (
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => onSendToChat(results.join('\n'))}
+                            aria-label="Send to chat"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 text-center bg-gray-800/50 rounded-md border border-dashed border-gray-700">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+                      <p className="text-gray-400">Parameter enumeration in progress...</p>
+                      <p className="text-sm text-gray-500 mt-2">Crawling targets and matching URL patterns, this may take a while depending on the target size.</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
