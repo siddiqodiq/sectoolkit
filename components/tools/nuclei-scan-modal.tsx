@@ -225,15 +225,15 @@ const formatResultLine = (line: string) => {
     }
 
     try {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
       const stopResponse = await fetch('/api/tools/nuclei-scan/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
       });
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
 
       if (!stopResponse.ok) {
         const errorData = await stopResponse.json();

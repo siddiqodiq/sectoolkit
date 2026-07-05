@@ -58,7 +58,8 @@ export function WhoisLookupModal({ tool, isOpen, onClose, onSendToChat }: WhoisL
       const response = await fetch('/api/tools/whois-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: domain.replace(/^https?:\/\//i, '') })
+        body: JSON.stringify({ domain: domain.replace(/^https?:\/\//i, '') }),
+        signal: abortControllerRef.current?.signal,
       });
 
       if (!response.ok) {

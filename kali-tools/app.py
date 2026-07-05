@@ -20,6 +20,7 @@ from subprocess import Popen, PIPE
 
 active_processes = {}
 process_lock = Lock()
+active_files = {}
 
 
 
@@ -403,7 +404,7 @@ def cleanup_resources_fuzz(session_id, filepath=None):
                 except Exception:
                     try:
 
-                        import os, signal
+                        import signal
 
                         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -543,7 +544,7 @@ def stop_crawlurl():
             except Exception:
                 try:
 
-                    import os, signal
+                    import signal
 
                     os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -611,7 +612,7 @@ def execute_paramspider(command: list, session_id: str = None):
         except Exception:
             try:
 
-                import os, signal
+                import signal
 
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -797,8 +798,16 @@ def deep_crawl():
             universal_newlines=True,
             preexec_fn=os.setsid
         )
+        
+        session_id = data.get('session_id')
+        if session_id:
+            active_processes[session_id] = process
 
-        output, error = process.communicate(timeout=900)  # timeout 15 menit
+        try:
+            output, error = process.communicate(timeout=900)  # timeout 15 menit
+        finally:
+            if session_id and session_id in active_processes:
+                del active_processes[session_id]
 
         if process.returncode != 0:
             logger.error(f"Katana error: {error.strip()}")
@@ -824,7 +833,7 @@ def deep_crawl():
         except Exception:
             try:
 
-                import os, signal
+                import signal
 
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -887,6 +896,10 @@ def wayback_dork():
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/wayback/stop', methods=['POST'])
+def wayback_dork_stop():
+    return jsonify({"message": "Wayback scan stopped successfully"}), 200
 
 @app.route('/api/whois', methods=['POST'])
 def whois_lookup():
@@ -1539,7 +1552,7 @@ def stop_sqlmap_scan():
                 except Exception:
                     try:
 
-                        import os, signal
+                        import signal
 
                         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -1598,7 +1611,7 @@ def dnsrecon_scan():
                 process = subprocess.Popen(
                     command,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                     text=True,
                     bufsize=1,
                     universal_newlines=True,
@@ -1608,12 +1621,14 @@ def dnsrecon_scan():
                 active_processes[session_id] = process
                 logger.info(f"Started DNSRecon scan for {domain} (PID: {process.pid})")
                 
+                import re
                 # Stream output line by line
                 for line in process.stdout:
                     if session_id in active_processes:
-                        # Filter and format output
                         if line.strip() and not line.startswith(('┌──', '└──')):
-                            output_queue.put(line)
+                            # Remove timestamp and log level e.g. "2026-07-05T10:37:31.256678+0000 INFO     "
+                            clean_line = re.sub(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\+\d{4}\s+(INFO|ERROR|WARNING|DEBUG)\s+', '', line)
+                            output_queue.put(clean_line)
                     else:
                         break
                 
@@ -1678,7 +1693,7 @@ def stop_dnsrecon():
                 except Exception:
                     try:
 
-                        import os, signal
+                        import signal
 
                         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -1826,7 +1841,7 @@ def stop_nuclei_scan():
                 except Exception:
                     try:
 
-                        import os, signal
+                        import signal
 
                         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -1870,6 +1885,7 @@ def enumerate_params():
             
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"{uuid.uuid4()}_{secure_filename(file.filename)}")
             file.save(filepath)
+            active_files[session_id] = filepath
             
             command = (
                 f"cat {filepath} | "
@@ -1921,6 +1937,7 @@ def enumerate_params():
                 # Stream output
                 for line in process.stdout:
                     if session_id in active_processes:
+                        logger.debug(f"[ParamEnum {session_id}] {line.strip()}")
                         if line.strip():  # Hanya line yang tidak kosong
                             found_params = True
                             output_queue.put(line)
@@ -1929,15 +1946,18 @@ def enumerate_params():
                 
                 process.wait()
                 if not found_params:
+                    logger.debug(f"[ParamEnum {session_id}] No parameters found")
                     output_queue.put("[INFO] No parameters found matching the specified pattern\n")
+                logger.debug(f"[ParamEnum {session_id}] Process completed with return code {process.returncode}")
                 output_queue.put(None)
             except Exception as e:
                 output_queue.put(f"[ERROR] {str(e)}\n")
                 output_queue.put(None)
             finally:
                 # Cleanup
-                if 'filepath' in locals() and os.path.exists(filepath):
-                    os.remove(filepath)
+                filepath_to_delete = active_files.pop(session_id, None)
+                if filepath_to_delete and os.path.exists(filepath_to_delete):
+                    os.remove(filepath_to_delete)
                 active_processes.pop(session_id, None)
         
         Thread(target=read_output).start()
@@ -1990,16 +2010,12 @@ def stop_enumeration():
                     import signal
                     os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 except Exception:
-                    try:
-
-                        import os, signal
-
-                        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
-
-                    except Exception:
-
-                        process.kill()
+                    process.kill()
             
+            filepath_to_delete = active_files.pop(session_id, None)
+            if filepath_to_delete and os.path.exists(filepath_to_delete):
+                os.remove(filepath_to_delete)
+                
             del active_processes[session_id]
             return jsonify({"status": "stopped"})
         except Exception as e:
@@ -2228,7 +2244,7 @@ def stop_lfi_scan():
                 except Exception:
                     try:
 
-                        import os, signal
+                        import signal
 
                         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 
@@ -2314,7 +2330,7 @@ def stop_header_check():
                 except Exception:
                     try:
 
-                        import os, signal
+                        import signal
 
                         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
 

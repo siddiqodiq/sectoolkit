@@ -96,14 +96,14 @@ export function NmapScanModal({ tool, isOpen, onClose, onSendToChat }: NmapScanM
   const stopScan = async () => {
     if (!sessionId) return;
     try {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
       const stopResponse = await fetch('/api/tools/nmap-scan/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
       });
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       if (!stopResponse.ok) throw new Error('Failed to stop scan');
     } catch (error) {
       console.error(error);

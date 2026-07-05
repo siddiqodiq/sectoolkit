@@ -1,6 +1,6 @@
 // components/tools/deep-crawler-modal.tsx
 "use client";
-import { useState, useRef, ChangeEvent } from "react";
+import { useState, useRef, ChangeEvent, useEffect } from "react";
 import { BaseToolModal } from "./base-tool-modal";
 import { Tool } from "@/lib/tools";
 import { 
@@ -23,7 +23,8 @@ import {
   Check, 
   Send,
   AlertCircle,
-  ChevronDown
+  ChevronDown,
+  StopCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -44,7 +45,38 @@ export function DeepCrawlerModal({ tool, isOpen, onClose, onSendToChat }: DeepCr
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [noResultsFound, setNoResultsFound] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  const stopCrawl = async () => {
+    if (!sessionId) return;
+    try {
+      const stopResponse = await fetch('/api/tools/deep-crawler/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (!stopResponse.ok) throw new Error('Failed to stop scan');
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+      setSessionId(null);
+      abortControllerRef.current = null;
+    }
+  };
 
    const handleRunCrawler = async () => {
     if (!target) {
@@ -57,6 +89,10 @@ export function DeepCrawlerModal({ tool, isOpen, onClose, onSendToChat }: DeepCr
     setResults([]);
     setNoResultsFound(false);
 
+    abortControllerRef.current = new AbortController();
+    const newSessionId = crypto.randomUUID();
+    setSessionId(newSessionId);
+
     try {
       const response = await fetch('/api/tools/deep-crawler', {
         method: 'POST',
@@ -64,7 +100,8 @@ export function DeepCrawlerModal({ tool, isOpen, onClose, onSendToChat }: DeepCr
           'Content-Type': 'application/json',
           'Accept': 'application/json; charset=utf-8'
         },
-        body: JSON.stringify({ target })
+        body: JSON.stringify({ target, session_id: newSessionId }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
@@ -88,17 +125,27 @@ export function DeepCrawlerModal({ tool, isOpen, onClose, onSendToChat }: DeepCr
           description: `Found ${data.count || 0} URLs`,
         });
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      setError(errorMessage);
-      
-      toast({
-        title: "Error running crawler",
-        description: errorMessage,
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        toast({
+          title: "Crawl cancelled",
+          description: "The deep crawl was cancelled.",
+          variant: "destructive",
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+        setError(errorMessage);
+        
+        toast({
+          title: "Error running crawler",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
+      setSessionId(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -111,8 +158,10 @@ export function DeepCrawlerModal({ tool, isOpen, onClose, onSendToChat }: DeepCr
     }
   };
 
-  const confirmClose = () => {
-    setIsLoading(false); // This will cancel any ongoing fetch requests
+  const confirmClose = async () => {
+    if (isLoading && sessionId) {
+      await stopCrawl();
+    }
     setShowConfirmClose(false);
     onClose();
   };
@@ -218,11 +267,11 @@ export function DeepCrawlerModal({ tool, isOpen, onClose, onSendToChat }: DeepCr
                 )}
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex gap-2">
               <Button
                 onClick={handleRunCrawler}
                 disabled={isLoading || !target}
-                className="w-full"
+                className="flex-1"
               >
                 {isLoading ? (
                   <>
@@ -236,6 +285,16 @@ export function DeepCrawlerModal({ tool, isOpen, onClose, onSendToChat }: DeepCr
                   </>
                 )}
               </Button>
+              {isLoading && (
+                <Button
+                  onClick={stopCrawl}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <StopCircle className="mr-2 h-4 w-4" />
+                  Stop Crawling
+                </Button>
+              )}
             </CardFooter>
           </Card>
 

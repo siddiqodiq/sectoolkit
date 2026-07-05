@@ -151,15 +151,27 @@ export function ParamEnumModal({ tool, isOpen, onClose, onSendToChat }: ParamEnu
         const lines = accumulatedText.split('\n');
         accumulatedText = lines.pop() || '';
 
-        for (const line of lines) {
-          if (line.trim()) {
-            setResults(prev => [...prev, line]);
+        for (const rawLine of lines) {
+          const line = rawLine.trim();
+          if (line) {
+            setResults(prev => {
+              if (!prev.includes(line)) {
+                return [...prev, line];
+              }
+              return prev;
+            });
           }
         }
       }
 
-      if (accumulatedText.trim()) {
-        setResults(prev => [...prev, accumulatedText]);
+      const finalLine = accumulatedText.trim();
+      if (finalLine) {
+        setResults(prev => {
+          if (!prev.includes(finalLine)) {
+            return [...prev, finalLine];
+          }
+          return prev;
+        });
       }
 
       toast({
@@ -200,15 +212,15 @@ export function ParamEnumModal({ tool, isOpen, onClose, onSendToChat }: ParamEnu
     }
 
     try {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
       const stopResponse = await fetch('/api/tools/enumerate-params/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
       });
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
 
       if (!stopResponse.ok) {
         const errorData = await stopResponse.json();

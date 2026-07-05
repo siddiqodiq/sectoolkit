@@ -43,28 +43,12 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
   const [error, setError] = useState<string | null>(null);
   const [domain, setDomain] = useState("");
   const [activeCheckDomain, setActiveCheckDomain] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [copied, setCopied] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0];
-      if (selectedFile.type === "text/plain" || selectedFile.name.endsWith('.txt')) {
-        setFile(selectedFile);
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "upload a .txt file",
-          variant: "destructive",
-        });
-      }
-    }
-  };
 
 
   useEffect(() => {
@@ -86,10 +70,6 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
     }
 
     try {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
       const endpoint = type === 'enumeration' 
         ? '/api/tools/subdomain/enumeration/stop' 
         : '/api/tools/subdomain/active-check/stop';
@@ -99,6 +79,10 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId }),
       });
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
 
       if (!stopResponse.ok) {
         const errorData = await stopResponse.json().catch(() => ({}));
@@ -198,8 +182,8 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
 
   // components/tools/subdomain-modal.tsx
   const handleActiveCheck = async () => {
-    if (!file && !activeCheckDomain) {
-      setError("Either domain or file must be provided");
+    if (!activeCheckDomain) {
+      setError("Domain must be provided");
       return;
     }
   
@@ -212,13 +196,7 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
   
     try {
       const formData = new FormData();
-      
-      if (file) {
-        formData.append("file", file);
-      } else {
-        // Pastikan menggunakan nama field 'domain' yang konsisten
-        formData.append("domain", activeCheckDomain);
-      }
+      formData.append("domain", activeCheckDomain);
   
       formData.append('session_id', newSessionId);
       const response = await fetch('/api/tools/subdomain/active-check', {
@@ -410,54 +388,24 @@ export function SubdomainModal({ tool, isOpen, onClose, onSendToChat }: Subdomai
               
               <TabsContent value="activeCheck" className="space-y-4 pt-4">
                 <div className="space-y-2">
-                  <Label>Domain or File</Label>
+                  <Label>Domain</Label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                     <Input
                       type="text"
                       placeholder="example.com"
                       value={activeCheckDomain}
-                      onChange={(e) => {
-                        setActiveCheckDomain(e.target.value.trim());
-                        setFile(null);
-                      }}
-                      disabled={isLoading || !!file}
+                      onChange={(e) => setActiveCheckDomain(e.target.value.trim())}
+                      disabled={isLoading}
                     />
-                    <span className="text-sm text-muted-foreground">OR</span>
-                    <Button
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isLoading || !!activeCheckDomain}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      {file ? file.name : "Upload File"}
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".txt"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      disabled={isLoading || !!activeCheckDomain}
-                    />
-                    {file && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setFile(null)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {activeCheckDomain 
-                      ? "Will check active subdomains for this domain" 
-                      : "Upload a text file with one domain or subdomain per line"}
+                    Check which subdomains are actively serving HTTP/HTTPS.
                   </p>
                 </div>
+                
                 <Button
                   onClick={handleActiveCheck}
-                  disabled={isLoading || (!activeCheckDomain && !file)}
+                  disabled={isLoading || !activeCheckDomain}
                   className="w-full"
                 >
                   {isLoading ? (

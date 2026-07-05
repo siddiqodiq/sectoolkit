@@ -23,7 +23,8 @@ import {
   Send,
   AlertCircle,
   History,
-  Filter
+  Filter,
+  StopCircle
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -76,7 +77,38 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
   const [selectedFileFilters, setSelectedFileFilters] = useState<Record<string, boolean>>({});
   const [selectedKeywordFilters, setSelectedKeywordFilters] = useState<Record<string, boolean>>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  const stopScan = async () => {
+    if (!sessionId) return;
+    try {
+      const stopResponse = await fetch('/api/tools/wayback-dorking/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (!stopResponse.ok) throw new Error('Failed to stop scan');
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+      setSessionId(null);
+      abortControllerRef.current = null;
+    }
+  };
 
   // Apply filters whenever allResults or filters change
   useEffect(() => {
@@ -140,11 +172,16 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
     setSelectedFileFilters({});
     setSelectedKeywordFilters({});
 
+    abortControllerRef.current = new AbortController();
+    const newSessionId = crypto.randomUUID();
+    setSessionId(newSessionId);
+
     try {
       const response = await fetch('/api/tools/wayback-dorking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target })
+        body: JSON.stringify({ target, session_id: newSessionId }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!response.ok) {
@@ -173,17 +210,27 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
         title: "Wayback Dorking completed",
         description: `Found ${allResults.length} historical URLs`,
       });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      setError(errorMessage);
-      
-      toast({
-        title: "Error running tool",
-        description: errorMessage,
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        toast({
+          title: "Scan cancelled",
+          description: "The Wayback search was cancelled.",
+          variant: "destructive",
+        });
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+        setError(errorMessage);
+        
+        toast({
+          title: "Error running tool",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
+      setSessionId(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -195,8 +242,10 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
     }
   };
 
-  const confirmClose = () => {
-    setIsLoading(false);
+  const confirmClose = async () => {
+    if (isLoading && sessionId) {
+      await stopScan();
+    }
     setShowConfirmClose(false);
     onClose();
   };
@@ -347,6 +396,15 @@ export function WaybackDorkingModal({ tool, isOpen, onClose, onSendToChat }: Way
                   </>
                 )}
               </Button>
+              {isLoading && (
+                <Button
+                  onClick={stopScan}
+                  variant="destructive"
+                >
+                  <StopCircle className="mr-2 h-4 w-4" />
+                  Stop
+                </Button>
+              )}
               {allResults.length > 0 && (
                 <Button
                   variant="outline"
