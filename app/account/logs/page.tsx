@@ -1,40 +1,58 @@
+import '../../globals.css';
 import { Metadata } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import prisma from '@/lib/db';
 import { MainNavbar } from '@/components/main-navbar';
-import { Clock, Activity, FileText } from 'lucide-react';
+import { Clock, Activity, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Activity Logs | Pusdatin Security Toolkit',
   description: 'View your recent activity logs',
 };
 
-async function getLogs(userId: string) {
+async function getLogsData(userId: string, page: number, pageSize: number) {
   try {
-    const logs = await prisma.activityLog.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 100, // Fetch top 100
-    });
-    return logs;
+    const [logs, total] = await Promise.all([
+      prisma.activityLog.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.activityLog.count({
+        where: { userId }
+      })
+    ]);
+    return { logs, total };
   } catch (error) {
     console.error('Failed to fetch logs:', error);
-    return [];
+    return { logs: [], total: 0 };
   }
 }
 
-export default async function ActivityLogsPage() {
+export default async function ActivityLogsPage(props: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
     redirect('/login');
   }
 
-  const logs = await getLogs(session.user.id);
+  const searchParams = await props.searchParams;
+  const pageParam = searchParams?.page;
+  const currentPage = typeof pageParam === 'string' ? parseInt(pageParam, 10) : 1;
+  const page = isNaN(currentPage) || currentPage < 1 ? 1 : currentPage;
+  const pageSize = 10;
+
+  const { logs, total } = await getLogsData(session.user.id, page, pageSize);
+  const totalPages = Math.ceil(total / pageSize);
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-GB', {
@@ -78,7 +96,7 @@ export default async function ActivityLogsPage() {
         <Card className="glass-effect hover-effect">
           <CardHeader>
             <CardTitle className="text-lg">Recent Activities</CardTitle>
-            <CardDescription>Showing up to 100 most recent activities on your account.</CardDescription>
+            <CardDescription>Showing up to {pageSize} most recent activities on your account.</CardDescription>
           </CardHeader>
           <CardContent>
             {logs.length === 0 ? (
@@ -116,6 +134,55 @@ export default async function ActivityLogsPage() {
                     ))}
                   </TableBody>
                 </Table>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6">
+                <div className="text-sm text-gray-400">
+                  Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total} results
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1}
+                    className="bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    asChild={page > 1}
+                  >
+                    {page > 1 ? (
+                      <Link href={`/account/logs?page=${page - 1}`}>
+                        <ChevronLeft className="h-4 w-4 mr-2" />
+                        Previous
+                      </Link>
+                    ) : (
+                      <>
+                        <ChevronLeft className="h-4 w-4 mr-2" />
+                        Previous
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages}
+                    className="bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white"
+                    asChild={page < totalPages}
+                  >
+                    {page < totalPages ? (
+                      <Link href={`/account/logs?page=${page + 1}`}>
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </Link>
+                    ) : (
+                      <>
+                        Next
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

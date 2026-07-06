@@ -1281,7 +1281,8 @@ def xss_scan():
             if not is_valid_url(target_url):
                 return jsonify({"error": "Invalid target URL format"}), 400
 
-            command.extend(["url", target_url])
+            # Wrap target_url in quotes to prevent & from truncating if shell was used, or as requested
+            command.extend(["url", f'"{target_url}"'])
 
             # Add cookie header if provided
             if request.form.get('cookie'):

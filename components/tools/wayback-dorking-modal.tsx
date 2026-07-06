@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BaseToolModal } from "./base-tool-modal";
 import { Tool } from "@/lib/tools";
 import {  

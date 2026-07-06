@@ -1,6 +1,6 @@
 // components/tools/whois-lookup-modal.tsx
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { BaseToolModal } from "./base-tool-modal";
 import { Tool } from "@/lib/tools";
 import { 
@@ -42,7 +42,16 @@ export function WhoisLookupModal({ tool, isOpen, onClose, onSendToChat }: WhoisL
   const [domain, setDomain] = useState("");
   const [copied, setCopied] = useState(false);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const handleRunTool = async () => {
     if (!domain) {

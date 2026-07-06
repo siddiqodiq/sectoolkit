@@ -62,7 +62,9 @@ RUN git clone https://github.com/ameenmaali/urldedupe.git && \
     make && \
     cp urldedupe /usr/bin/
 
-RUN git clone https://github.com/projectdiscovery/nuclei-templates.git $HOME/nuclei-templates
+RUN git clone --depth 1 --filter=blob:none --sparse https://github.com/projectdiscovery/nuclei-templates.git $HOME/nuclei-templates && \
+    cd $HOME/nuclei-templates && \
+    git sparse-checkout set dast/vulnerabilities
 
 RUN git clone https://github.com/coffinxp/nuclei-templates.git $HOME/nt
 
@@ -109,7 +111,7 @@ RUN mkdir -p $HOME/.gf && \
     git clone https://github.com/1ndianl33t/Gf-Patterns && \
     cp Gf-Patterns/*.json $HOME/.gf/
 
-RUN nuclei -update-templates
+# RUN nuclei -update-templates  # Dinonaktifkan agar tidak mendownload semua template ulang
 
 # Aplikasi
 WORKDIR /app

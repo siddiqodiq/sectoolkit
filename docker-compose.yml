@@ -6,8 +6,10 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    # Postgres hanya di-bind ke localhost host (bukan LAN). App tetap konek
+    # via jaringan Docker (postgres:5432), jadi publish LAN tidak diperlukan.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -30,9 +32,11 @@ services:
         condition: service_healthy
       kali-tools:
         condition: service_started
+    # Hanya port aplikasi (3000) yang diekspos ke LAN.
+    # Prisma Studio (5555) TIDAK dipublish: GUI DB tanpa autentikasi, berbahaya
+    # di jaringan bersama. Jika perlu, jalankan manual & akses via localhost/SSH tunnel.
     ports:
       - "3000:3000"
-      - "5555:5555"
     volumes:
       - ./uploads:/app/uploads
     environment:

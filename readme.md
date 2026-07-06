@@ -1,7 +1,7 @@
-# 🕵️ Pungoe – Setup & Instalasi Docker
+# 🕵️ Sectoolkit– Setup & Instalasi Docker
 EN [Read English Version](readme.en.md)
 
-Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose.
+Repositori ini merupakan proyek `Sectookit`, aplikasi uji penetrasi web dengan arsitektur berbasis layanan terpisah (multi-container) menggunakan Docker Compose.
 
 ---
 
@@ -40,8 +40,8 @@ Repositori ini merupakan proyek `Pungoe`, aplikasi uji penetrasi web dengan arsi
 ### 1. Clone Repositori
 
 ```bash
-git clone https://github.com/siddiqodiq/pungoe.git
-cd pungoe
+git clone https://github.com/siddiqodiq/sectoolkit.git
+cd sectoolkit
 ```
 
 ### 2. Siapkan File Environment
