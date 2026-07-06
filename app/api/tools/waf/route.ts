@@ -6,8 +6,6 @@ import { NextResponse } from 'next/server';
 import { detectWAF } from './detector';
 import { validateTargetUrl } from '../utils/validators';
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
-// Paksa route selalu dinamis (jangan di-cache/di-optimize saat build).
-export const dynamic = 'force-dynamic';
 // app/api/tools/waf/route.ts
 // app/api/tools/waf/route.ts
 export async function POST(req: Request) {

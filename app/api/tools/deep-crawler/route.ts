@@ -5,8 +5,6 @@ import { logUserActivity } from '@/lib/logger';
 import { NextResponse } from 'next/server';
 
 const kaliToolsUrl = process.env.KALI_TOOLS || "http://kali-tools:5000";
-// Paksa route selalu dinamis (jangan di-cache/di-optimize saat build).
-export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
