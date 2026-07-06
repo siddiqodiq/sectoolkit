@@ -1,56 +1,148 @@
-# Pungoe - Web Vulnerability Scanner Application Brief
+# Panduan Deploy Pungoe di Jaringan Kantor (akses multi-user via LAN/WiFi)
 
-**To the AI Assistant:** This document provides a comprehensive overview of the Pungoe application architecture, mechanics, and your primary focus areas. Please read this carefully before suggesting or implementing changes.
-
-## 1. Application Mechanism & Architecture Overview
-
-Pungoe is a web-based vulnerability scanning platform consisting of two main services communicating via Docker containers:
-
-### Frontend & API Proxy (Next.js)
-- **Tech Stack:** Next.js (App Router), TypeScript, React, Tailwind CSS, shadcn/ui, Prisma ORM, NextAuth.
-- **Role:** Handles user authentication, database logging (Prisma), user interface, and form submissions.
-- **Mechanism:** User requests from the browser are sent to Next.js API Routes (e.g., `/api/tools/xss-scan`). The Next.js API then acts as a proxy, forwarding the `FormData` to the Flask backend. It receives the streaming output from Flask and pipes it back to the client UI in real-time.
-
-### Backend Execution Engine (Flask / Kali Linux)
-- **Tech Stack:** Python, Flask, Docker (Kali Linux base image).
-- **Role:** Executes native security tools (e.g., Nmap, ffuf, Dalfox, Nuclei, ParamSpider, loxs/LFI, DNSRecon).
-- **Mechanism:** 
-  - Receives HTTP requests from Next.js.
-  - Generates a unique `session_id` (UUID).
-  - Spawns background threads and executes tools using `subprocess.Popen`.
-  - Captures stdout/stderr via `queue.Queue` and streams the output back as a generator (`yield`).
-  - Maintains state using global dictionaries (`active_processes`, `active_files`) protected by `threading.Lock` to allow users to cancel/stop running scans via dedicated `/stop` API routes.
+Dokumen ini panduan menghosting aplikasi Pungoe (Next.js + Flask + Postgres via Docker Compose) di satu komputer kantor agar bisa diakses staf lain lewat browser.
 
 ---
 
-## 2. Efficiency & Best Practices Guidelines
+## 0. Ringkasan Temuan Jaringan (hasil tes langsung)
 
-When implementing or reviewing features, prioritize the following efficiencies:
+| Jaringan | IP host saat diuji | Hasil | Layak dipakai? |
+|---|---|---|---|
+| **WiFi kantor `ap.pom.go.id`** (`10.14.0.0/19`) | `10.14.2.135` | Dari client `10.14.2.110` (satu subnet, listener aktif): ping **gagal**, TCP :3000 **gagal** | ❌ **Tidak** — AP/Client Isolation aktif, klien tidak boleh saling akses |
+| **Hotspot "retr"** (Windows Mobile Hotspot, `192.168.137.0/24`) | `192.168.137.67` | Dari client `192.168.137.212`: ping **4/4 reply, 0% loss** | ✅ **Ya** — isolation OFF |
+| **LAN kabel kantor** | — | Belum diuji | ❓ Perlu dites (WiFi sering isolasi, LAN kabel sering tidak) |
 
-- **Thread Safety:** The Flask backend heavily relies on multithreading. Ensure that any modifications to global state (`active_processes`, `active_files`) strictly use `process_lock` (`threading.Lock()`).
-- **Process Management:** Prevent zombie processes. Subprocesses must be spawned with `preexec_fn=os.setsid` and terminated using `os.killpg(os.getpgid(pid), signal.SIGTERM)` to ensure child processes are fully killed on cancellation.
-- **Stream Handling:** In the Next.js API routes, ensure `TransformStream` and readers/writers are properly closed in `finally` blocks to prevent memory leaks during long-running streams.
-- **Resource Cleanup:** Ensure every executed tool has a robust cleanup mechanism. Temporary files and uploaded payloads must be deleted immediately after the scan finishes naturally or is aborted.
+**Kesimpulan:** WiFi kantor tidak bisa dipakai untuk hosting internal (isolasi di level access point, di luar kendali aplikasi). Path yang **terbukti jalan** = **hotspot "retr" `192.168.137.x`**. Panduan di bawah memakai path ini. Jika nanti LAN kabel lolos tes, itu alternatif paling stabil.
+
+> Cara membedakan "isolasi jaringan" vs "firewall host memblok ping": ping (ICMP) bisa diblok firewall walau TCP jalan. Uji yang menentukan adalah **TCP ke port 3000** memakai listener sementara (lihat Fase 0). Kalau ping DAN TCP sama-sama gagal padahal listener aktif & satu subnet → itu isolasi jaringan.
 
 ---
 
-## 3. Security Focus: Input Sanitization & File Uploads
+## 1. Topologi & Peran Mesin
 
-Since this application executes terminal commands based on user input, **security is the absolute highest priority**. You must proactively check and harden the following areas without breaking the existing mechanics:
+Host (aplikasi) ada di subnet hotspot `192.168.137.x` yang **di-NAT** di belakang mesin "pc hotspot".
 
-### A. Command Injection Prevention (CRITICAL)
-- **Avoid `shell=True`:** Whenever possible, use list arguments in `subprocess.Popen` (e.g., `["nmap", "-p", "80", target]`) to bypass shell evaluation entirely.
-- **When `shell=True` is unavoidable:** If you must use `shell=True` (e.g., for piping or handling complex target URLs with `&` or `?`), you **must** rigorously sanitize the input. Wrap user inputs in single quotes (`'input'`) or use `shlex.quote()` before passing them to the shell.
-- **Validation:** Always validate `target_url` using strict regex or URL parsing (`urllib.parse`) before executing.
+```
+Office LAN ──[ PC HOTSPOT: NIC LAN + hotspot "retr" ]──╲(NAT)╱── WiFi "retr" 192.168.137.x
+    │                                                                    │
+ User LAN  ── ❌ tak bisa masuk (NAT blokir inbound) ──►      PC Host 192.168.137.67:3000 (app)
+                                                              User WiFi ── ✅ bisa langsung
+```
 
-### B. Secure File Uploads
-- **Filename Sanitization:** Always use `werkzeug.utils.secure_filename` combined with a UUID prefix (`f"{uuid.uuid4()}_{secure_filename(filename)}"`) to prevent Path Traversal attacks.
-- **Extension Restrictions:** Validate file extensions strictly. Only allow expected formats (e.g., `.txt`, `.yaml`, `.pdf`). Do not rely solely on MIME types from the frontend.
-- **Directory Isolation:** Ensure uploads are confined to an absolute, isolated directory (`app.config['UPLOAD_FOLDER']`).
+- **User WiFi "retr"** → bisa langsung ke PC Host (satu subnet).
+- **User LAN** → NAT memblok inbound ke subnet WiFi, jadi butuh **relay/port-forward** di mesin pc hotspot (lihat Fase 3).
 
-### C. Internal API Security
-- **Trust Boundaries:** Currently, the Flask backend blindly accepts requests on port 5000. Recommend and implement checks so Flask only accepts requests originating from the Next.js Docker container (e.g., via internal Docker network isolation or an internal API Key/Bearer token).
-- **Rate Limiting & DoS:** Be mindful of denial-of-service vectors. Heavy tools like Nuclei or Ffuf should have constraints on maximum concurrent executions per user.
+| Peran | Mesin | IP | Fungsi |
+|---|---|---|---|
+| App host | PC Host | `192.168.137.67:3000` (WiFi) | Menjalankan Docker/aplikasi |
+| Relay (untuk user LAN) | PC Hotspot | `PCHOTSPOT_LAN_IP:3000` (sisi LAN) | Meneruskan (portproxy) ke PC Host |
 
-## 4. Final Directive
-Always review the existing codebase context before modifying. Your goal is to make the application faster, more resilient to edge cases, and completely impenetrable to command injection or path traversal from malicious user input, while maintaining its core vulnerability-scanning mechanics.
+---
+
+## Fase 0 — PoC Konektivitas (WAJIB dulu, sebelum setup Docker)
+
+Tujuan: buktikan host & komputer staf bisa saling terhubung. Kalau gagal, setup aplikasi percuma.
+
+1. **Prasyarat:** host & minimal 1 komputer staf tersambung ke jaringan yang sama; catat `HOST_IP` (`ipconfig` → adapter yang aktif).
+2. **Tes ping (opsional, L3):** di host izinkan ICMP dulu (PowerShell admin):
+   `New-NetFirewallRule -DisplayName "Allow Ping" -Protocol ICMPv4 -IcmpType 8 -Direction Inbound -Action Allow`
+   lalu dari client: `ping HOST_IP`.
+3. **Tes port TCP (paling menentukan):**
+   - Di host: `New-NetFirewallRule -DisplayName "Test 3000" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow` lalu `python -m http.server 3000`.
+   - Dari client (PowerShell): `Test-NetConnection -ComputerName HOST_IP -Port 3000`.
+   - `TcpTestSucceeded : True` → jaringan siap ✅. `False` (padahal listener aktif & satu subnet) → jaringan mengisolasi klien, ganti jaringan.
+   - Hentikan listener (Ctrl+C) setelah tes.
+4. **Jika gagal:** cek (a) beda subnet, (b) firewall host (ICMP vs TCP), (c) **AP/client isolation** (WiFi kantor sering aktif — inilah kasus `ap.pom.go.id`), (d) antivirus pihak ketiga.
+
+---
+
+## Fase 1 — Setup di PC HOST
+
+### 1.1 Prasyarat
+- Install **Docker Desktop** (Windows) / Docker Engine (Linux).
+- Salin folder project ke host (termasuk `.env`).
+- Pastikan host tersambung ke hotspot **"retr"**; catat IP WiFi-nya (`192.168.137.x`) = `HOST_IP`.
+  - ⚠️ IP DHCP hotspot bisa berubah saat reconnect → sesuaikan config bila berubah.
+
+### 1.2 Edit `.env`
+- `NEXTAUTH_URL="http://PCHOTSPOT_LAN_IP:3000"` ← **paling kritikal**. Semua user (LAN & WiFi) mengakses lewat alamat entry yang sama (IP-LAN pc hotspot), agar cocok. Kalau **tidak** melayani user LAN (semua staf gabung WiFi "retr"), pakai `http://HOST_IP:3000`.
+- `NEXTAUTH_SECRET="<acak-kuat>"` → `openssl rand -base64 32`.
+- `DB_PASSWORD` & `DATABASE_URL` → ganti password default jadi kuat (samakan keduanya).
+- `INTERNAL_API_KEY` → sudah ada; boleh regen `openssl rand -hex 32`.
+- `KALI_TOOLS` biarkan (di Docker sudah di-override ke `http://kali-tools:5000`).
+
+### 1.3 Build & jalankan
+```
+docker compose up -d --build
+```
+- Migrasi DB otomatis (entrypoint). Cek: `docker compose ps` (semua Up), `docker compose logs -f app`.
+
+### 1.4 Firewall host — izinkan TCP 3000
+```powershell
+New-NetFirewallRule -DisplayName "Pungoe 3000" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+```
+Jika perlu, izinkan juga Docker Desktop lewat Windows Defender Firewall.
+
+### 1.5 Uji lokal di host
+Buka `http://localhost:3000` → daftar akun pertama / login → jalankan 1 tool (mis. Nmap `scanme.nmap.org`) → hasil keluar.
+
+---
+
+## Fase 2 — Akses untuk User WiFi "retr"
+- Staf gabung WiFi **"retr"** → buka `http://PCHOTSPOT_LAN_IP:3000` (atau `http://HOST_IP:3000` jika tidak pakai relay).
+- Verifikasi: `Test-NetConnection -ComputerName <alamat> -Port 3000` → `True`.
+
+---
+
+## Fase 3 — Akses untuk User LAN (relay via PC Hotspot)
+Hanya perlu bila ingin melayani user yang di LAN kabel (bukan di WiFi "retr").
+
+### 3.1 Cari `PCHOTSPOT_LAN_IP`
+Di mesin pc hotspot: `ipconfig` → adapter **Ethernet/LAN** (bukan `192.168.137.1`) → IPv4.
+
+### 3.2 Port forwarding (di mesin PC HOTSPOT, PowerShell admin)
+```powershell
+netsh interface portproxy add v4tov4 listenport=3000 listenaddress=0.0.0.0 connectport=3000 connectaddress=192.168.137.67
+netsh interface portproxy show all          # cek
+# hapus: netsh interface portproxy delete v4tov4 listenport=3000 listenaddress=0.0.0.0
+```
+- Prasyarat: service **IP Helper** (`iphlpsvc`) berjalan (`Get-Service iphlpsvc`).
+
+### 3.3 Firewall pc hotspot — izinkan TCP 3000
+```powershell
+New-NetFirewallRule -DisplayName "Pungoe Relay 3000" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+```
+
+### 3.4 Aturan URL tunggal
+Semua user (LAN & WiFi) akses `http://PCHOTSPOT_LAN_IP:3000`, dan `NEXTAUTH_URL` = alamat itu.
+- User LAN → langsung.
+- User WiFi → juga bisa (arah WiFi→LAN diizinkan NAT).
+
+> ⚠️ Dua IP bergerak: `192.168.137.67` (target relay — IP WiFi PC Host, bisa berubah → update `netsh portproxy`) dan `PCHOTSPOT_LAN_IP` (entry + `NEXTAUTH_URL` — lebih stabil bila LAN pakai IP statik/reservasi).
+
+---
+
+## Keamanan yang SUDAH diterapkan di repo
+- **Command injection ditutup** di backend Flask (list-form / `shlex.quote`, validasi input diperketat).
+- **Isolasi backend:** Flask port `5000` tidak dipublish (hanya internal Docker network).
+- **Gate internal:** Flask menolak request tanpa header `X-Internal-Key`; semua route Next.js mengirimnya. Aktif bila `INTERNAL_API_KEY` di-set (sudah di `.env`).
+- **Port DB ditutup dari LAN:** `docker-compose.yml` — Postgres di-bind ke `127.0.0.1` saja, Prisma Studio `5555` tidak dipublish. Hanya port app `3000` yang terekspos.
+- **Rate limiting:** `MAX_CONCURRENT_SCANS` (default 10) untuk tool berat.
+
+### Tindak lanjut disarankan
+- **Registrasi terbuka:** `/api/auth/register` bebas diakses siapa pun di jaringan. Untuk internal, batasi (nonaktifkan self-register / whitelist email / approval admin).
+- **Otorisasi target:** aplikasi menjalankan tool ofensif (nmap, sqlmap, nuclei). Pastikan staf hanya men-scan target yang diizinkan.
+- **Backup** volume `postgres_data` (berisi akun & log) berkala.
+
+---
+
+## Checklist Test Manual (setelah deploy)
+1. **Smoke test:** login → jalankan tiap tool (fokus XSS, LFI, check-headers yang baru direfactor ke list-form).
+2. **Command injection:** kirim target jahat (`http://x.com/;id`, `$(id)`, backtick, `| curl evil`) → harus 400 / tidak tereksekusi. Cek `docker compose exec kali-tools ls /tmp/pwned` → tidak ada.
+3. **Gate internal:** `docker compose exec app curl -s -o /dev/null -w "%{http_code}\n" -X POST http://kali-tools:5000/api/waf -H "Content-Type: application/json" -d '{"domain":"example.com"}'` → **401** (tanpa key); tambah `-H "X-Internal-Key: <isi .env>"` → bukan 401.
+4. **Isolasi backend:** dari host `curl http://localhost:5000` → connection refused.
+5. **Stop scan:** jalankan Nuclei/SQLMap → Stop → `docker compose exec kali-tools ps aux | grep -E "nuclei|gau|sqlmap"` → bersih.
+6. **Cleanup file:** `docker compose exec kali-tools ls /app/uploads` → kosong setelah scan selesai/di-stop.
+7. **Rate limit:** >10 scan berat bersamaan → yang ke-11 dapat **429**.
+8. **DB tertutup:** dari komputer staf, koneksi ke `HOST_IP:5432` dan `http://HOST_IP:5555` harus **gagal**.
+
